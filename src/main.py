@@ -39,10 +39,10 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="Crypto Key Management API",
+    title="Crypto Key Inventory Management API",
     description=(
         "This API provides endpoints for managing cryptographic keys and key types. "
-        "It is designed to facilitate secure storage and management of cryptographic "
+        "It is designed to tracn the inventory of cryptographic "
         "material, following industry standards such as PCI DSS. Key features include "
         "CRUD operations for managing key types, algorithms, cryptoperiods, and "
         "encryption configurations."
@@ -69,18 +69,8 @@ async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONR
     )
 
 # KeyType Operations
-@app.post("/keyTypes/", response_model=schemas.KeyTypeSchema, summary="Create a new KeyType")
-def create_key_type(key_type: schemas.KeyTypeCreate, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
-    """
-    Create a new KeyType with specified details.
-
-    - **key_type**: Details of the KeyType to be created.
-    """
-    return crud.create_key_type(db=db, key_type=key_type)
-
-
-@app.get("/keyTypes/", response_model=Sequence[schemas.KeyTypeSchema], summary="List KeyTypes with optional filtering")
-def read_key_types(
+@app.get("/keyTypes/", response_model=Sequence[schemas.KeyTypeSchema], summary="List KeyTypes with optional filtering,pagination, and sorting")
+def get_key_types(
     skip: int = Query(0, alias="offset", ge=0, description="The number of records to skip."),
     limit: int = Query(10, le=100, description="The number of records to return, maximum 100."),
     order_by: Optional[str] = Query(
@@ -91,7 +81,7 @@ def read_key_types(
     db: Session = Depends(get_db),
 ) -> Sequence[schemas.KeyTypeSchema]:
     """
-    Retrieve a list of KeyTypes with optional filtering, sorting, and pagination.
+    Get a list of KeyTypes with optional filtering, sorting, and pagination.
 
     - **offset**: The number of items to skip.
     - **limit**: The number of items to return.
@@ -118,10 +108,10 @@ def read_key_types(
 
     return result
 
-@app.get("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema, summary="Retrieve a KeyType by ID")
-def read_key_type(keyTypeId: str, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
+@app.get("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema, summary="Get a KeyType by ID")
+def get_key_type(keyTypeId: str, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
     """
-    Retrieve a specific KeyType by its ID.
+    Get a specific KeyType by its ID.
 
     - **keyTypeId**: The ID of the KeyType to retrieve.
     """
@@ -131,8 +121,17 @@ def read_key_type(keyTypeId: str, db: Session = Depends(get_db)) -> schemas.KeyT
     return db_key_type
 
 
-@app.delete("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema, summary="Delete or disable a KeyType")
-def delete_key_type(keyTypeId: str, force: bool = Query(False, description="Set to true to disable the KeyType and delete associated keys"), db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
+@app.post("/keyTypes/", response_model=schemas.KeyTypeSchema, summary="Create a new KeyType")
+def create_key_type(key_type: schemas.KeyTypeCreate, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
+    """
+    Create a new KeyType with specified details.
+
+    - **key_type**: Details of the KeyType to be created.
+    """
+    return crud.create_key_type(db=db, key_type=key_type)
+
+@app.delete("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema, summary="Delete a KeyType")
+def delete_key_type(keyTypeId: str, force: bool = Query(False, description="Set to true to force the KeyType and delete associated keys"), db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
     """
     Mark a KeyType as Deleted. If there are keys with the associated KeyType, thow an error.
     If `force=True`, mark the KeyType and mark all associated keys as deleted.
@@ -143,8 +142,8 @@ def delete_key_type(keyTypeId: str, force: bool = Query(False, description="Set 
     return crud.delete_key_type(db=db, key_type_id=keyTypeId, force=force)
 
 # Key Operations
-@app.get("/keys/", response_model=Sequence[schemas.CryptoKeySchema], summary="List CryptoKeys with optional filtering")
-def read_crypto_keys(
+@app.get("/keys/", response_model=Sequence[schemas.CryptoKeySchema], summary="List CryptoKeys with optional filtering, pagination, and sorting")
+def get_crypto_keys(
     skip: int = Query(0, alias="offset", ge=0, description="The number of records to skip."),
     limit: int = Query(10, le=100, description="The number of records to return, maximum 100."),
     order_by: Optional[str] = Query(
@@ -155,7 +154,7 @@ def read_crypto_keys(
     db: Session = Depends(get_db),
 ) -> Sequence[schemas.CryptoKeySchema]:
     """
-    Retrieve a list of CryptoKeys with optional filtering, sorting, and pagination.
+    Get a list of CryptoKeys with optional filtering, sorting, and pagination.
 
     - **offset**: The number of items to skip.
     - **limit**: The number of items to return.
@@ -182,10 +181,10 @@ def read_crypto_keys(
 
     return result
 
-@app.get("/keys/{key_id}", response_model=schemas.CryptoKeySchema, summary="Retrieve a CryptoKey by ID")
-def read_crypto_key(key_id: str, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
+@app.get("/keys/{key_id}", response_model=schemas.CryptoKeySchema, summary="Get a CryptoKey by ID")
+def get_crypto_key(key_id: str, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
     """
-    Retrieve a specific CryptoKey by its key_id.
+    Get a specific CryptoKey by its key_id.
 
     - **key_id**: The ID of the CryptoKey to retrieve.
     """
@@ -210,7 +209,7 @@ def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, justification: str, d
         raise HTTPException(status_code=400, detail="Invalid key_type_id")
     return crud.create_crypto_key(db=db, crypto_key=crypto_key, justification=justification)
 
-@app.post("/keys/{key_id}/suspend", summary="suspend a CryptoKey")
+@app.post("/keys/{key_id}/suspend", summary="Suspend a CryptoKey")
 def suspend_key(key_id: str, justification: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
     """
     Transition the status of a CryptoKey to "Suspended".
@@ -241,10 +240,10 @@ def destroy_key(key_id: str, justification: str, db: Session = Depends(get_db)) 
     return crud.update_key_status(db, key_id, KeyStatus.DESTROYED, justification)
 
 # Key History Operations
-@app.get("/keys/{key_id}/history", response_model=list[schemas.KeyHistorySchema], summary="Retrieve CryptoKey history")
+@app.get("/keys/{key_id}/history", response_model=list[schemas.KeyHistorySchema], summary="Get CryptoKey history")
 def get_key_history(key_id: str, db: Session = Depends(get_db)) -> list[schemas.CryptoKeySchema]:
     """
-    Retrieve the history of state changes for a specific CryptoKey.
+    Get the history of state changes for a specific CryptoKey.
 
     - **key_id**: The ID of the CryptoKey whose history to retrieve.
     """
@@ -254,6 +253,3 @@ def get_key_history(key_id: str, db: Session = Depends(get_db)) -> list[schemas.
         raise HTTPException(
             status_code=404, detail="No history found for this key")
     return history
-
-
-
