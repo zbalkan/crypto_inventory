@@ -7,14 +7,33 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 import crud
-import models
 import schemas
 from database import Base, engine, get_db
 from utils import format_cryptoperiod
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(
+    title="Crypto Key Management API",
+    description=(
+        "This API provides endpoints for managing cryptographic keys and key types. "
+        "It is designed to facilitate secure storage and management of cryptographic "
+        "material, following industry standards such as PCI DSS. Key features include "
+        "CRUD operations for managing key types, algorithms, cryptoperiods, and "
+        "encryption configurations."
+    ),
+    version="1.0.0",
+    terms_of_service="https://www.example.com/terms/",
+    contact={
+        "name": "API Support",
+        "url": "https://www.example.com/support",
+        "email": "support@example.com",
+    },
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    },
+)
 
 @app.exception_handler(IntegrityError)
 async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONResponse:
