@@ -38,20 +38,23 @@ def create_key_type(db: Session, key_type: KeyTypeCreate) -> KeyTypeSchema:
         db_key_type = KeyType(
             name=key_type.name,
             description=key_type.description,
-            cryptoperiod_days=parse_cryptoperiod(key_type.cryptoperiod)
+            algorithm=key_type.algorithm,
+            size_bits=key_type.size_bits,
+            generated_by=key_type.generated_by,
+            form_factor=key_type.form_factor,
+            uniqueness_scope=key_type.uniqueness_scope,
+            cryptoperiod_days=cryptoperiod_days
         )
         db.add(db_key_type)
         db.commit()
         db.refresh(db_key_type)
         return KeyTypeSchema.model_validate(db_key_type)
     except IntegrityError as e:
-        db.rollback()  # Rollback transaction in case of error
-        print(f"Integrity error creating key type: {e}")
+        db.rollback()
         raise HTTPException(
             status_code=400, detail="Key type already exists or invalid data")
     except SQLAlchemyError as e:
         db.rollback()
-        print(f"Error creating key type: {e}")
         raise HTTPException(
             status_code=500, detail="Failed to create key type")
 

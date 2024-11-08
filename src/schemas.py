@@ -4,13 +4,18 @@ from typing import Optional
 
 from pydantic import BaseModel, field_validator
 
-from utils import format_cryptoperiod, parse_cryptoperiod
+from utils import parse_cryptoperiod
 
 
 class KeyTypeBase(BaseModel):
     name: str
     description: str
-    cryptoperiod: str  # Accept a user-friendly format like "6m" or "1y"
+    algorithm: str
+    size_bits: int
+    generated_by: str  # E.g., Acquirer, Vendor, etc.
+    form_factor: str  # E.g., # Components, Encrypted, etc.
+    uniqueness_scope: str  # Device, Acquirer, Vendor, etc.
+    cryptoperiod: str  # Accept a user-friendly format like "30d", "6m", "1y"
 
     @field_validator("cryptoperiod")
     @classmethod
@@ -24,16 +29,12 @@ class KeyTypeCreate(KeyTypeBase):
     pass
 
 
-class KeyTypeSchema(KeyTypeBase):  # Renamed to avoid conflict
+class KeyTypeSchema(KeyTypeBase):
     id: int
-
-    @property
-    def cryptoperiod_days(self) -> int:
-        """Converts the human-readable cryptoperiod to days."""
-        return parse_cryptoperiod(self.cryptoperiod)
+    cryptoperiod_days: int  # Store in days for internal use
 
     class Config:
-        from_attributes = True  # Use `from_attributes` instead of `orm_mode`
+        from_attributes = True  # Enable compatibility with SQLAlchemy ORM models
 
 
 class CryptoKeyBase(BaseModel):

@@ -10,15 +10,23 @@ from database import Base
 class KeyType(Base):
     __tablename__ = "key_types"
 
-    id: Mapped[int] = Column(Integer, primary_key=True, index=True) # type: ignore
-    name: Mapped[str] = Column(String, unique=True, index=True) # type: ignore
-    description: Mapped[str] = Column(String) # type: ignore
-    cryptoperiod_days: Mapped[int] = Column(
-        Integer)  # type: ignore
-
+    id: Mapped[int] = Column(Integer, primary_key=True,
+                             index=True)  # type: ignore
+    name: Mapped[str] = Column(String, unique=True, index=True)  # type: ignore
+    description: Mapped[str] = Column(String)  # type: ignore
+    algorithm: Mapped[str] = Column(String)  # type: ignore
+    size_bits: Mapped[int] = Column(Integer)  # type: ignore
+    # E.g., Acquirer, Vendor, etc.
+    generated_by: Mapped[str] = Column(String)  # type: ignore
+    # E.g., # Components, Encrypted
+    form_factor: Mapped[str] = Column(String)  # type: ignore
+    # Device, Acquirer, Vendor, etc.
+    uniqueness_scope: Mapped[str] = Column(String)  # type: ignore
+    # Store cryptoperiod in days
+    cryptoperiod_days: Mapped[int] = Column(Integer)  # type: ignore
     # Relationship with CryptoKey
     crypto_keys: Mapped[list["CryptoKey"]] = relationship(
-        "CryptoKey", back_populates="key_type")
+        "CryptoKey", back_populates="key_type")  # type: ignore
 
 
 class CryptoKey(Base):
