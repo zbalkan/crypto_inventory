@@ -208,7 +208,7 @@ def create_key_version(
         notes=original_key.notes,
         activation_date=original_key.activation_date,
         # Track the creation date of this record
-        record_creation_date=datetime.now(timezone.utc)
+        timestamp=datetime.now(timezone.utc)
     )
     try:
         db.add(new_key_version)
@@ -232,7 +232,7 @@ def update_key_status(db: Session, key_id: str, new_status: KeyStatus, justifica
     original_key = (
         db.query(CryptoKey)
         .filter(CryptoKey.key_id == key_id)
-        .order_by(CryptoKey.record_creation_date.desc())
+        .order_by(CryptoKey.timestamp.desc())
         .first()
     )
     if not original_key:
@@ -280,7 +280,7 @@ def get_key_history(db: Session, key_id: str) -> list[CryptoKeySchema]:
     history = (
         db.query(CryptoKey)
         .filter(CryptoKey.key_id == key_id)
-        .order_by(CryptoKey.record_creation_date)
+        .order_by(CryptoKey.timestamp)
         .all()
     )
     return [CryptoKeySchema.model_validate(record) for record in history]

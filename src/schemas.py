@@ -181,7 +181,7 @@ class CryptoKeyStatusUpdate(BaseModel):
 
 class CryptoKeySchema(CryptoKeyBase):
     key_id: str
-    record_creation_date: datetime = Field(...,
+    timestamp: datetime = Field(...,
                       description="Date when this record was created for audit purposes")
 
     class Config:
@@ -191,7 +191,7 @@ class CryptoKeySchema(CryptoKeyBase):
 class KeyHistorySchema(BaseModel):
     id: str = Field(alias="key_id")  # Expose `key_id` as `id`
     status: KeyStatus
-    record_creation_date: str
+    timestamp: str
     description: str
     # Any other fields to show historical snapshots
 
