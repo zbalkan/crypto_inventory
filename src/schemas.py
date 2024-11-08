@@ -1,9 +1,9 @@
 # schemas.py
-from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
+from models import KeyStatus
 from utils import parse_cryptoperiod
 
 
@@ -62,10 +62,9 @@ class CryptoKeyBase(BaseModel):
     usage_purpose: str
     operational_environment: str
     associated_parties: str
-    activation_date: Optional[datetime] = None
     intended_lifetime: str
-    status: str
-    rotation_or_expiration_date: Optional[datetime] = None
+    status: KeyStatus
+    rotation_or_expiration_date: Optional[str] = None
     access_control_mechanisms: str
     compliance_requirements: str
     audit_log_reference: str
@@ -79,6 +78,21 @@ class CryptoKeyCreate(CryptoKeyBase):
 
 class CryptoKeySchema(CryptoKeyBase):
     id: int
+    activation_date: str
+    record_creation_date: str = Field(
+        ..., description="Date when this record was created for audit purposes")
+
+    class Config:
+        from_attributes = True
+
+
+class KeyHistorySchema(BaseModel):
+    id: int
+    key_type_id: int
+    status: KeyStatus
+    record_creation_date: str
+    description: str
+    # Any other fields to show historical snapshots
 
     class Config:
         from_attributes = True

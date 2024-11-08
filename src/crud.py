@@ -1,4 +1,5 @@
 # crud.py
+from datetime import datetime, timezone
 from sqlite3 import IntegrityError
 from typing import Any, Optional, Sequence, Type
 
@@ -10,7 +11,7 @@ from sqlalchemy.orm import Session
 from models import CryptoKey, KeyStatus, KeyType
 from schemas import (CryptoKeyCreate, CryptoKeySchema, KeyTypeCreate,
                      KeyTypeSchema)
-from utils import parse_cryptoperiod, validate_cryptoperiod_days
+from utils import parse_cryptoperiod
 
 
 def apply_filters_and_sorting(
@@ -163,13 +164,66 @@ def create_crypto_key(db: Session, crypto_key: CryptoKeyCreate) -> CryptoKeySche
     # Convert the database model to CryptoKeySchema for the response
     return CryptoKeySchema.model_validate(db_crypto_key)
 
-def update_key_status(db: Session, key_id: int, new_status: KeyStatus) -> CryptoKeySchema:
-    key = db.query(CryptoKey).filter(CryptoKey.id == key_id).first()
+def create_key_version(
+    db: Session,
+    original_key: CryptoKey,
+    new_status: KeyStatus
+) -> CryptoKeySchema:
+    # Create a new version of the CryptoKey record
+    new_key_version = CryptoKey(
+        key_type_id=original_key.key_type_id,
+        description=original_key.description,
+        generating_entity=original_key.generating_entity,
+        generation_method=original_key.generation_method,
+        storage_location=original_key.storage_location,
+        encryption_under_lmk=original_key.encryption_under_lmk,
+        form_factor=original_key.form_factor,
+        scope_of_uniqueness=original_key.scope_of_uniqueness,
+        usage_purpose=original_key.usage_purpose,
+        operational_environment=original_key.operational_environment,
+        associated_parties=original_key.associated_parties,
+        intended_lifetime=original_key.intended_lifetime,
+        status=new_status,
+        rotation_or_expiration_date=original_key.rotation_or_expiration_date,
+        access_control_mechanisms=original_key.access_control_mechanisms,
+        compliance_requirements=original_key.compliance_requirements,
+        audit_log_reference=original_key.audit_log_reference,
+        backup_and_recovery_details=original_key.backup_and_recovery_details,
+        notes=original_key.notes,
+        activation_date=original_key.activation_date,
+        # Track the creation date of this record
+        record_creation_date=datetime.now(timezone.utc)
+    )
+    try:
+        db.add(new_key_version)
+        db.commit()
+        db.refresh(new_key_version)
+        return CryptoKeySchema.model_validate(new_key_version)
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(
+            status_code=500, detail="Error creating new key version")
 
-    if key is None:
+
+def update_key_status(db: Session, key_id: int, new_status: KeyStatus) -> CryptoKeySchema:
+    # Find the latest record of the key
+    original_key = (
+        db.query(CryptoKey)
+        .filter(CryptoKey.id == key_id)
+        .order_by(CryptoKey.record_creation_date.desc())
+        .first()
+    )
+    if not original_key:
         raise HTTPException(status_code=404, detail="Key not found")
 
-    key.status = new_status
-    db.commit()
-    db.refresh(key)
-    return CryptoKeySchema.model_validate(key)
+    # Create a new record with the updated status
+    return create_key_version(db, original_key, new_status)
+
+def get_key_history(db: Session, key_id: int) -> list[CryptoKeySchema]:
+    history = (
+        db.query(CryptoKey)
+        .filter(CryptoKey.id == key_id)
+        .order_by(CryptoKey.record_creation_date)
+        .all()
+    )
+    return [CryptoKeySchema.model_validate(record) for record in history]

@@ -177,3 +177,12 @@ def expire_key(key_id: int, db: Session = Depends(get_db)):
 def delete_key(key_id: int, db: Session = Depends(get_db)):
     key = crud.update_key_status(db, key_id, KeyStatus.DELETED)
     return key
+
+
+@app.get("/keys/{key_id}/history", response_model=list[schemas.KeyHistorySchema])
+def get_key_history(key_id: int, db: Session = Depends(get_db)):
+    history = crud.get_key_history(db, key_id=key_id)
+    if not history:
+        raise HTTPException(
+            status_code=404, detail="No history found for this key")
+    return history
