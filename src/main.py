@@ -1,40 +1,56 @@
 # main.py
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-
+from typing import Sequence
 import crud
+import models
 import schemas
-from database import Base, engine, get_db
+from database import engine, Base, get_db
+from utils import format_cryptoperiod
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-@app.post("/crypto_keys/", response_model=schemas.CryptoKey)
-def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, db: Session = Depends(get_db)) -> crud.CryptoKey:
+
+@app.post("/key_types/", response_model=schemas.KeyTypeSchema)
+def create_key_type(key_type: schemas.KeyTypeCreate, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
+    return crud.create_key_type(db=db, key_type=key_type)
+
+
+@app.get("/key_types/", response_model=Sequence[schemas.KeyTypeSchema])
+def read_key_types(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)) -> Sequence[schemas.KeyTypeSchema]:
+    key_types = crud.get_key_types(db, skip=skip, limit=limit)
+    # Format cryptoperiods for each returned KeyTypeSchema instance
+    for key_type in key_types:
+        key_type.cryptoperiod = format_cryptoperiod(key_type.cryptoperiod_days)
+    return key_types
+
+
+@app.get("/key_types/{key_type_id}", response_model=schemas.KeyTypeSchema)
+def read_key_type(key_type_id: int, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
+    db_key_type = crud.get_key_type(db, key_type_id=key_type_id)
+    if db_key_type is None:
+        raise HTTPException(status_code=404, detail="KeyType not found")
+    return db_key_type
+
+
+@app.post("/crypto_keys/", response_model=schemas.CryptoKeySchema)
+def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
+    db_key_type = crud.get_key_type(db, key_type_id=crypto_key.key_type_id)
+    if not db_key_type:
+        raise HTTPException(status_code=400, detail="Invalid key_type_id")
     return crud.create_crypto_key(db=db, crypto_key=crypto_key)
 
-@app.get("/crypto_keys/", response_model=list[schemas.CryptoKey])
-def read_crypto_keys(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)) -> list[crud.CryptoKey]:
+
+@app.get("/crypto_keys/", response_model=Sequence[schemas.CryptoKeySchema])
+def read_crypto_keys(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)) -> Sequence[schemas.CryptoKeySchema]:
     return crud.get_crypto_keys(db, skip=skip, limit=limit)
 
-@app.get("/crypto_keys/{key_id}", response_model=schemas.CryptoKey)
-def read_crypto_key(key_id: int, db: Session = Depends(get_db)) -> crud.CryptoKey:
+
+@app.get("/crypto_keys/{key_id}", response_model=schemas.CryptoKeySchema)
+def read_crypto_key(key_id: int, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
     db_crypto_key = crud.get_crypto_key(db, key_id=key_id)
     if db_crypto_key is None:
-        raise HTTPException(status_code=404, detail="Crypto key not found")
-    return db_crypto_key
-
-@app.put("/crypto_keys/{key_id}", response_model=schemas.CryptoKey)
-def update_crypto_key(key_id: int, crypto_key: schemas.CryptoKeyCreate, db: Session = Depends(get_db)) -> crud.CryptoKey:
-    db_crypto_key = crud.update_crypto_key(db=db, key_id=key_id, crypto_key=crypto_key)
-    if db_crypto_key is None:
-        raise HTTPException(status_code=404, detail="Crypto key not found")
-    return db_crypto_key
-
-@app.delete("/crypto_keys/{key_id}", response_model=schemas.CryptoKey)
-def delete_crypto_key(key_id: int, db: Session = Depends(get_db)) -> crud.CryptoKey:
-    db_crypto_key = crud.delete_crypto_key(db=db, key_id=key_id)
-    if db_crypto_key is None:
-        raise HTTPException(status_code=404, detail="Crypto key not found")
+        raise HTTPException(status_code=404, detail="CryptoKey not found")
     return db_crypto_key
