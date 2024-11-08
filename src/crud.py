@@ -8,7 +8,7 @@ from sqlalchemy import asc, desc
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from models import CryptoKey, KeyStatus, KeyType, KeyTypeStatus
+from models import ALLOWED_TRANSITIONS, CryptoKey, KeyStatus, KeyType, KeyTypeStatus
 from schemas import CryptoKeyCreate, CryptoKeySchema, KeyTypeCreate, KeyTypeSchema
 from utils import parse_cryptoperiod
 
@@ -244,6 +244,12 @@ def create_key_version(
             status_code=500, detail="Error creating new key version")
 
 
+def is_transition_valid(current_status: KeyStatus, new_status: KeyStatus) -> bool:
+    """
+    Check if the transition from current_status to new_status is valid.
+    """
+    return new_status in ALLOWED_TRANSITIONS[current_status]
+
 def update_key_status(db: Session, key_id: str, new_status: KeyStatus, justification: str) -> CryptoKeySchema:
     # Find the latest record of the key
     original_key = (
@@ -255,8 +261,18 @@ def update_key_status(db: Session, key_id: str, new_status: KeyStatus, justifica
     if not original_key:
         raise HTTPException(status_code=404, detail="Key not found")
 
+     # Validate transition
+    if not is_transition_valid(original_key.status, new_status):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Transition from {original_key.status.value} to {new_status.value} is not allowed."
+        )
+
     if new_status != KeyStatus.EXPIRED and not justification:
-        raise ValueError("Justification is required for this status change.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Justification is required for this status change."
+        )
 
     # Create a new record with the updated status
     return create_key_version(db, original_key, new_status)

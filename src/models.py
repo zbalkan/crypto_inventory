@@ -97,3 +97,12 @@ class CryptoKey(Base):
     # Relationship with KeyType
     key_type: Mapped["KeyType"] = relationship(
         "KeyType", back_populates="crypto_keys")  # type: ignore
+
+
+ALLOWED_TRANSITIONS = {
+    KeyStatus.ACTIVE: {KeyStatus.SUSPENDED, KeyStatus.COMPROMISED, KeyStatus.EXPIRED},
+    KeyStatus.SUSPENDED: {KeyStatus.ACTIVE, KeyStatus.EXPIRED, KeyStatus.DESTROYED},
+    KeyStatus.COMPROMISED: {KeyStatus.DESTROYED},
+    KeyStatus.EXPIRED: {KeyStatus.DESTROYED},
+    KeyStatus.DESTROYED: set()  # No transitions allowed from Destroyed
+}
