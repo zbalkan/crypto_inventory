@@ -42,6 +42,7 @@ async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONR
         content={"detail": "Database integrity error. This may be due to duplicate or invalid data."}
     )
 
+# Key type operations
 @app.post("/keyTypes/", response_model=schemas.KeyTypeSchema)
 def create_key_type(key_type: schemas.KeyTypeCreate, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
     return crud.create_key_type(db=db, key_type=key_type)
@@ -84,6 +85,23 @@ def read_key_type(keyTypeId: int, db: Session = Depends(get_db)) -> schemas.KeyT
     return db_key_type
 
 
+@app.patch("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema)
+def update_key_type(
+    keyTypeId: int,
+    key_type_updates: schemas.UpdateKeyType,
+    db: Session = Depends(get_db)
+) -> schemas.KeyTypeSchema:
+    updates = key_type_updates.dict(exclude_unset=True)
+    return crud.update_key_type(db=db, key_type_id=keyTypeId, updates=updates)
+
+# Delete KeyType (soft delete)
+
+
+@app.delete("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema)
+def delete_key_type(keyTypeId: int, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
+    return crud.delete_key_type(db=db, key_type_id=keyTypeId)
+
+# Key operations
 @app.post("/keys/", response_model=schemas.CryptoKeySchema)
 def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
     db_key_type = crud.get_key_type(db, key_type_id=crypto_key.key_type_id)
@@ -92,7 +110,7 @@ def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, db: Session = Depends
     return crud.create_crypto_key(db=db, crypto_key=crypto_key)
 
 
-@app.get("/cryptoKeys/", response_model=Sequence[schemas.CryptoKeySchema])
+@app.get("/keys/", response_model=Sequence[schemas.CryptoKeySchema])
 def read_crypto_keys(
     skip: int = Query(0, alias="offset", ge=0),
     limit: int = Query(10, le=100),
@@ -121,7 +139,7 @@ def read_crypto_keys(
     )
 
 
-@app.get("/cryptoKeys/{cryptoKeyId}", response_model=schemas.CryptoKeySchema)
+@app.get("/keys/{cryptoKeyId}", response_model=schemas.CryptoKeySchema)
 def read_crypto_key(cryptoKeyId: int, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
     db_crypto_key = crud.get_crypto_key(db, key_id=cryptoKeyId)
     if db_crypto_key is None:

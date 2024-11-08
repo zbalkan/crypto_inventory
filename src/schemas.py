@@ -36,6 +36,19 @@ class KeyTypeSchema(KeyTypeBase):
     class Config:
         from_attributes = True
 
+class UpdateKeyType(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    algorithm: Optional[str] = None
+    size_bits: Optional[int] = None
+    generated_by: Optional[str] = None
+    form_factor: Optional[str] = None
+    uniqueness_scope: Optional[str] = None
+    cryptoperiod: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
 
 class CryptoKeyBase(BaseModel):
     key_type_id: int
