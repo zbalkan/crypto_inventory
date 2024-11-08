@@ -57,9 +57,9 @@ def get_key_types(
         raise HTTPException(
             status_code=500, detail="Database error while retrieving key types.")
 
-def get_key_type(db: Session, key_type_id: int) -> Optional[KeyTypeSchema]:
+def get_key_type(db: Session, key_type_id: str) -> Optional[KeyTypeSchema]:
     # Retrieve a single KeyType model from the database
-    db_key_type = db.query(KeyType).filter(KeyType.id == key_type_id).first()
+    db_key_type = db.query(KeyType).filter(KeyType.key_id == key_type_id).first()
     # Convert to KeyTypeSchema if the model exists
     return KeyTypeSchema.model_validate(db_key_type) if db_key_type else None
 
@@ -92,8 +92,8 @@ def create_key_type(db: Session, key_type: KeyTypeCreate) -> KeyTypeSchema:
             status_code=500, detail="Failed to create key type")
 
 
-def update_key_type(db: Session, key_type_id: int, updates: dict[str, Any]) -> KeyTypeSchema:
-    key_type = db.query(KeyType).filter(KeyType.id == key_type_id).first()
+def update_key_type(db: Session, key_type_id: str, updates: dict[str, Any]) -> KeyTypeSchema:
+    key_type = db.query(KeyType).filter(KeyType.key_id == key_type_id).first()
 
     if not key_type:
         raise HTTPException(status_code=404, detail="KeyType not found")
@@ -114,10 +114,10 @@ def update_key_type(db: Session, key_type_id: int, updates: dict[str, Any]) -> K
         raise HTTPException(status_code=500, detail="Error updating KeyType")
 
 
-def delete_key_type(db: Session, key_type_id: int, force: bool = False) -> KeyTypeSchema:
+def delete_key_type(db: Session, key_type_id: str, force: bool = False) -> KeyTypeSchema:
     # Retrieve the KeyType
     key_type = db.query(KeyType).filter(
-        KeyType.id == key_type_id, KeyType.status == KeyTypeStatus.ACTIVE).first()
+        KeyType.key_id == key_type_id, KeyType.status == KeyTypeStatus.ACTIVE).first()
     if not key_type:
         raise HTTPException(
             status_code=404, detail="KeyType not found or already disabled.")

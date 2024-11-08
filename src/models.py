@@ -19,8 +19,10 @@ class KeyTypeStatus(Enum):
 class KeyType(Base):
     __tablename__ = "key_types"
 
+
     id: Mapped[int] = Column(Integer, primary_key=True,
-                             index=True)  # type: ignore
+                         index=True)  # type: ignore
+    key_id = Column(String, default=lambda: str(ulid.new()), unique=True, index=True)  # type: ignore
     name: Mapped[str] = Column(String, unique=True, index=True)  # type: ignore
     description: Mapped[str] = Column(String)  # type: ignore
     algorithm: Mapped[str] = Column(String)  # type: ignore

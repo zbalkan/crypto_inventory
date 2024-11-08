@@ -40,7 +40,7 @@ class KeyTypeCreate(KeyTypeBase):
 
 
 class KeyTypeSchema(KeyTypeBase):
-    id: int
+    key_id: str
     cryptoperiod: str = Field(..., description="User-friendly cryptoperiod format")
 
     @model_validator(mode="after")
@@ -51,6 +51,7 @@ class KeyTypeSchema(KeyTypeBase):
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 class UpdateKeyType(BaseModel):
     name: Optional[str] = Field(
@@ -65,10 +66,9 @@ class UpdateKeyType(BaseModel):
 
     class Config:
         from_attributes = True
-
+        populate_by_name = True
 
 class CryptoKeyBase(BaseModel):
-    key_type_id: int
     description: str = Field(..., max_length=250,
                              description="Description of the crypto key")
     generating_entity: str = Field(..., max_length=100,
@@ -115,11 +115,10 @@ class CryptoKeyBase(BaseModel):
         return values
 
 class CryptoKeyCreate(CryptoKeyBase):
-    pass
-
+    key_type_id: int
 
 class CryptoKeySchema(CryptoKeyBase):
-    id: str = Field(alias="key_id")  # Expose `key_id` as `id` in the response
+    key_id: str
     record_creation_date: datetime = Field(
         ..., description="Date when this record was created for audit purposes")
 
