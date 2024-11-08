@@ -85,7 +85,7 @@ class CryptoKey(Base):
     intended_lifetime: Mapped[str] = Column(String)  # type: ignore
     status: Mapped[KeyStatus] = Column(SQLAlchemyEnum(
         KeyStatus), default=KeyStatus.ACTIVE)  # type: ignore
-    rotation_or_expiration_date: Mapped[datetime | None] = Column(
+    expiration_date: Mapped[datetime | None] = Column(
         DateTime, nullable=True)  # type: ignore
     access_control_mechanisms: Mapped[str] = Column(String)  # type: ignore
     compliance_requirements: Mapped[str] = Column(String)  # type: ignore

@@ -200,7 +200,7 @@ def create_key_version(
         associated_parties=original_key.associated_parties,
         intended_lifetime=original_key.intended_lifetime,
         status=new_status,
-        rotation_or_expiration_date=original_key.rotation_or_expiration_date,
+        expiration_date=original_key.expiration_date,
         access_control_mechanisms=original_key.access_control_mechanisms,
         compliance_requirements=original_key.compliance_requirements,
         audit_log_reference=original_key.audit_log_reference,
@@ -264,7 +264,7 @@ def check_and_expire_keys(db: Session) -> None:
     # Query all active or suspended keys with expiration dates in the past
     keys_to_expire = db.query(CryptoKey).filter(
         (CryptoKey.status.in_([KeyStatus.ACTIVE, KeyStatus.SUSPENDED])) &
-        (CryptoKey.rotation_or_expiration_date <= now)
+        (CryptoKey.expiration_date <= now)
     ).all()
 
     for key in keys_to_expire:

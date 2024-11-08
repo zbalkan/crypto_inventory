@@ -131,7 +131,7 @@ class CryptoKeyBase(BaseModel):
     status: KeyStatus
     activation_date: Optional[datetime] = Field(None,
                       description="The activation date of the key")
-    rotation_or_expiration_date: Optional[datetime] = Field(None,
+    expiration_date: Optional[datetime] = Field(None,
                       description="The rotation or expiration date of the key")
     access_control_mechanisms: str = Field(...,
                       max_length=250,
@@ -152,7 +152,7 @@ class CryptoKeyBase(BaseModel):
     @model_validator(mode="after")
     def check_dates(cls, values):
         activation_date = values.get("activation_date")
-        rotation_date = values.get("rotation_or_expiration_date")
+        rotation_date = values.get("expiration_date")
         if activation_date and rotation_date:
             if activation_date > rotation_date:
                 raise ValueError(
@@ -160,7 +160,6 @@ class CryptoKeyBase(BaseModel):
         return values
 
 class CryptoKeyCreate(CryptoKeyBase):
-    key_type_id: int
     description: str
     generating_entity: str
     justification: str
