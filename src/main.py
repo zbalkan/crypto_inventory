@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 import crud
 import schemas
 from database import Base, engine, get_db
-from utils import format_cryptoperiod
+from models import KeyStatus
 
 Base.metadata.create_all(bind=engine)
 
@@ -59,7 +59,7 @@ def read_key_types(
     db: Session = Depends(get_db),
 ) -> Sequence[schemas.KeyTypeSchema]:
     # Construct filters dictionary
-    filters = {}
+    filters: dict[str, Any] = {}
     if name is not None:
         filters["name"] = name
     if algorithm is not None:
@@ -127,3 +127,35 @@ def read_crypto_key(cryptoKeyId: int, db: Session = Depends(get_db)) -> schemas.
     if db_crypto_key is None:
         raise HTTPException(status_code=404, detail="CryptoKey not found")
     return db_crypto_key
+
+# Endpoint to transition key to "Current"
+
+
+@app.post("/keys/{key_id}/activate")
+def activate_key(key_id: int, db: Session = Depends(get_db)):
+    key = crud.update_key_status(db, key_id, KeyStatus.CURRENT)
+    return key
+
+# Endpoint to transition key to "Retired"
+
+
+@app.post("/keys/{key_id}/retire")
+def retire_key(key_id: int, db: Session = Depends(get_db)):
+    key = crud.update_key_status(db, key_id, KeyStatus.RETIRED)
+    return key
+
+# Endpoint to transition key to "Expired"
+
+
+@app.post("/keys/{key_id}/expire")
+def expire_key(key_id: int, db: Session = Depends(get_db)):
+    key = crud.update_key_status(db, key_id, KeyStatus.EXPIRED)
+    return key
+
+# Endpoint to transition key to "Deleted"
+
+
+@app.post("/keys/{key_id}/delete")
+def delete_key(key_id: int, db: Session = Depends(get_db)):
+    key = crud.update_key_status(db, key_id, KeyStatus.DELETED)
+    return key

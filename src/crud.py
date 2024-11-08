@@ -7,7 +7,7 @@ from sqlalchemy import asc, desc
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from models import CryptoKey, KeyType
+from models import CryptoKey, KeyStatus, KeyType
 from schemas import (CryptoKeyCreate, CryptoKeySchema, KeyTypeCreate,
                      KeyTypeSchema)
 from utils import parse_cryptoperiod, validate_cryptoperiod_days
@@ -124,3 +124,14 @@ def create_crypto_key(db: Session, crypto_key: CryptoKeyCreate) -> CryptoKeySche
     db.refresh(db_crypto_key)
     # Convert the database model to CryptoKeySchema for the response
     return CryptoKeySchema.model_validate(db_crypto_key)
+
+def update_key_status(db: Session, key_id: int, new_status: KeyStatus) -> CryptoKeySchema:
+    key = db.query(CryptoKey).filter(CryptoKey.id == key_id).first()
+
+    if key is None:
+        raise HTTPException(status_code=404, detail="Key not found")
+
+    key.status = new_status
+    db.commit()
+    db.refresh(key)
+    return CryptoKeySchema.model_validate(key)
