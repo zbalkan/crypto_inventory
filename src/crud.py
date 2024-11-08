@@ -9,8 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from models import CryptoKey, KeyStatus, KeyType, KeyTypeStatus
-from schemas import (CryptoKeyCreate, CryptoKeySchema, KeyTypeCreate,
-                     KeyTypeSchema)
+from schemas import CryptoKeyCreate, CryptoKeySchema, KeyTypeCreate, KeyTypeSchema
 from utils import parse_cryptoperiod
 
 
@@ -57,12 +56,18 @@ def get_key_types(
         raise HTTPException(
             status_code=500, detail="Database error while retrieving key types.")
 
-def get_key_type(db: Session, key_type_id: str) -> Optional[KeyTypeSchema]:
+def get_key_type_by_id(db: Session, key_type_id: int) -> Optional[KeyTypeSchema]:
+    # Retrieve a single KeyType model from the database
+    db_key_type = db.query(KeyType).filter(KeyType.id == key_type_id).first()
+    # Convert to KeyTypeSchema if the model exists
+    return KeyTypeSchema.model_validate(db_key_type) if db_key_type else None
+
+
+def get_key_type_by_ulid(db: Session, key_type_id: str) -> Optional[KeyTypeSchema]:
     # Retrieve a single KeyType model from the database
     db_key_type = db.query(KeyType).filter(KeyType.key_id == key_type_id).first()
     # Convert to KeyTypeSchema if the model exists
     return KeyTypeSchema.model_validate(db_key_type) if db_key_type else None
-
 
 def create_key_type(db: Session, key_type: KeyTypeCreate) -> KeyTypeSchema:
     try:
@@ -124,7 +129,7 @@ def delete_key_type(db: Session, key_type_id: str, force: bool = False) -> KeyTy
 
     # Check for associated CryptoKeys that are not already marked as deleted
     associated_keys_count = db.query(CryptoKey).filter(
-        CryptoKey.key_type_id == key_type_id, CryptoKey.status != KeyStatus.DELETED).count()
+        CryptoKey.key_type_id == key_type_id, CryptoKey.status != KeyStatus.DESTROYED).count()
 
     # Standard deletion attempt (if force=False and there are associated keys, raise an error)
     if associated_keys_count > 0:
@@ -142,7 +147,7 @@ def delete_key_type(db: Session, key_type_id: str, force: bool = False) -> KeyTy
 
                 # Soft delete all associated CryptoKeys by updating their status to DELETED
                 db.query(CryptoKey).filter(CryptoKey.key_type_id == key_type.id).update(
-                    {"status": KeyStatus.DELETED}
+                    {"status": KeyStatus.DESTROYED}
                 )
                 db.commit()
             except SQLAlchemyError as e:
@@ -260,3 +265,23 @@ def get_key_history(db: Session, key_id: str) -> list[CryptoKeySchema]:
         .all()
     )
     return [CryptoKeySchema.model_validate(record) for record in history]
+
+
+def check_and_expire_keys(db: Session) -> None:
+    """
+    Checks for CryptoKeys with an expiration date in the past and marks them as expired.
+    """
+    # Get the current date and time
+    now = datetime.now(timezone.utc)
+
+    # Query all active or suspended keys with expiration dates in the past
+    keys_to_expire = db.query(CryptoKey).filter(
+        (CryptoKey.status.in_([KeyStatus.ACTIVE, KeyStatus.SUSPENDED])) &
+        (CryptoKey.rotation_or_expiration_date <= now)
+    ).all()
+
+    for key in keys_to_expire:
+        key.status = KeyStatus.EXPIRED
+
+    # Commit the status updates to the database
+    db.commit()

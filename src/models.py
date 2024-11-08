@@ -46,10 +46,18 @@ class KeyType(Base):
 
 
 class KeyStatus(Enum):
-    CURRENT = "Current"
-    RETIRED = "Retired"
+    """
+    Active: Used to encrypt and decrypt data.
+    Expired: Used only to decrypt data. Cannot be used to encrypt new data.
+    Suspended: Temporarily disabled. Can be reactivated. Cannot be used to encrypt or decrypt data.
+    Compromised: Used only to decrypt data of a compromised key. Cannot be used to encrypt new data.
+    Destroyed: Historical reference to a key that no longer exists. Cannot be used to encrypt or decrypt data.
+    """
+    ACTIVE = "Active"
     EXPIRED = "Expired"
-    DELETED = "Deleted"
+    COMPROMISED = "Compromised"
+    SUSPENDED = "Suspended"
+    DESTROYED = "Destroyed"
 
 
 class CryptoKey(Base):
@@ -76,7 +84,7 @@ class CryptoKey(Base):
         DateTime, default=lambda: datetime.now(timezone.utc))  # type: ignore
     intended_lifetime: Mapped[str] = Column(String)  # type: ignore
     status: Mapped[KeyStatus] = Column(SQLAlchemyEnum(
-        KeyStatus), default=KeyStatus.CURRENT)  # type: ignore
+        KeyStatus), default=KeyStatus.ACTIVE)  # type: ignore
     rotation_or_expiration_date: Mapped[datetime | None] = Column(
         DateTime, nullable=True)  # type: ignore
     access_control_mechanisms: Mapped[str] = Column(String)  # type: ignore

@@ -1,8 +1,10 @@
 # main.py
+from contextlib import asynccontextmanager
 from typing import Any, Optional, Sequence
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
+from fastapi_utils.tasks import repeat_every
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -12,6 +14,20 @@ from database import Base, engine, get_db
 from models import KeyStatus
 
 Base.metadata.create_all(bind=engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Schedule the periodic task to run in the background
+    @repeat_every(seconds=86400)  # Run every 24 hours
+    async def scheduled_expiration_check() -> None:
+        """
+        This task runs every 24 hours to check for keys that need to be expired.
+        """
+        db = next(get_db())
+        crud.check_and_expire_keys(db)
+
+    # Yield to start the application
+    yield
 
 app = FastAPI(
     title="Crypto Key Management API",
@@ -33,6 +49,7 @@ app = FastAPI(
         "name": "Apache 2.0",
         "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
     },
+    lifespan=lifespan,
 )
 
 @app.exception_handler(IntegrityError)
@@ -93,13 +110,13 @@ def read_key_types(
     return result
 
 @app.get("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema, summary="Retrieve a KeyType by ID")
-def read_key_type(keyTypeId: int, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
+def read_key_type(keyTypeId: str, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
     """
     Retrieve a specific KeyType by its ID.
 
     - **keyTypeId**: The ID of the KeyType to retrieve.
     """
-    db_key_type = crud.get_key_type(db, key_type_id=keyTypeId)
+    db_key_type = crud.get_key_type_by_ulid(db, key_type_id=keyTypeId)
     if db_key_type is None:
         raise HTTPException(status_code=404, detail="KeyType not found")
     return db_key_type
@@ -107,7 +124,7 @@ def read_key_type(keyTypeId: int, db: Session = Depends(get_db)) -> schemas.KeyT
 
 @app.patch("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema, summary="Update a KeyType by ID")
 def update_key_type(
-    keyTypeId: int,
+    keyTypeId: str,
     key_type_updates: schemas.UpdateKeyType,
     db: Session = Depends(get_db)
 ) -> schemas.KeyTypeSchema:
@@ -117,12 +134,12 @@ def update_key_type(
     - **keyTypeId**: The ID of the KeyType to update.
     - **key_type_updates**: The fields to update with new values.
     """
-    updates = key_type_updates.dict(exclude_unset=True)
+    updates = key_type_updates.model_dump(exclude_unset=True)
     return crud.update_key_type(db=db, key_type_id=keyTypeId, updates=updates)
 
 
 @app.delete("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema, summary="Delete or disable a KeyType")
-def delete_key_type(keyTypeId: int, force: bool = Query(False, description="Set to true to disable the KeyType and delete associated keys"), db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
+def delete_key_type(keyTypeId: str, force: bool = Query(False, description="Set to true to disable the KeyType and delete associated keys"), db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
     """
     Mark a KeyType as Deleted. If there are keys with the associated KeyType, thow an error.
     If `force=True`, mark the KeyType and mark all associated keys as deleted.
@@ -133,19 +150,6 @@ def delete_key_type(keyTypeId: int, force: bool = Query(False, description="Set 
     return crud.delete_key_type(db=db, key_type_id=keyTypeId, force=force)
 
 # Key Operations
-@app.post("/keys/", response_model=schemas.CryptoKeySchema, summary="Create a new CryptoKey")
-def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
-    """
-    Create a new CryptoKey with specified details.
-
-    - **crypto_key**: Details of the CryptoKey to create.
-    """
-    db_key_type = crud.get_key_type(db, key_type_id=crypto_key.key_type_id)
-    if not db_key_type:
-        raise HTTPException(status_code=400, detail="Invalid key_type_id")
-    return crud.create_crypto_key(db=db, crypto_key=crypto_key)
-
-
 @app.get("/keys/", response_model=Sequence[schemas.CryptoKeySchema], summary="List CryptoKeys with optional filtering")
 def read_crypto_keys(
     skip: int = Query(0, alias="offset", ge=0, description="The number of records to skip."),
@@ -198,47 +202,52 @@ def read_crypto_key(key_id: str, db: Session = Depends(get_db)) -> schemas.Crypt
         raise HTTPException(status_code=404, detail="CryptoKey not found")
     return db_crypto_key
 
-# Key Status Transition Endpoints
-@app.post("/keys/{key_id}/activate", summary="Activate a CryptoKey")
-def activate_key(key_id: str, db: Session = Depends(get_db)):
+
+@app.post("/keys/", response_model=schemas.CryptoKeySchema, summary="Create a new CryptoKey")
+def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
     """
-    Transition the status of a CryptoKey to "Current".
+    Create a new CryptoKey with specified details.
+    Status: Active (Used to encrypt and decrypt data.)
 
-    - **key_id**: The ID of the CryptoKey to activate.
+    - **crypto_key**: Details of the CryptoKey to create.
     """
-    return crud.update_key_status(db, key_id, KeyStatus.CURRENT)
+    db_key_type = crud.get_key_type_by_id(
+        db, key_type_id=crypto_key.key_type_id)
+    if not db_key_type:
+        raise HTTPException(status_code=400, detail="Invalid key_type_id")
+    return crud.create_crypto_key(db=db, crypto_key=crypto_key)
 
-
-@app.post("/keys/{key_id}/retire", summary="Retire a CryptoKey")
-def retire_key(key_id: str, db: Session = Depends(get_db)):
+@app.post("/keys/{key_id}/suspend", summary="suspend a CryptoKey")
+def suspend_key(key_id: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
     """
-    Transition the status of a CryptoKey to "Retired".
+    Transition the status of a CryptoKey to "Suspended".
+    Status: Suspended (Temporarily disabled. Can be reactivated. Cannot be used to encrypt or decrypt data.)
 
-    - **key_id**: The ID of the CryptoKey to retire.
+    - **key_id**: The ID of the CryptoKey to suspend.
     """
-    return crud.update_key_status(db, key_id, KeyStatus.RETIRED)
+    return crud.update_key_status(db, key_id, KeyStatus.SUSPENDED)
 
-
-@app.post("/keys/{key_id}/expire", summary="Expire a CryptoKey")
-def expire_key(key_id: str, db: Session = Depends(get_db)):
+@app.post("/keys/{key_id}/revoke", summary="Revoke a CryptoKey")
+def revoke_key(key_id: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
     """
-    Transition the status of a CryptoKey to "Expired".
-
-    - **key_id**: The ID of the CryptoKey to expire.
+    Transition the status of a CryptoKey to "Compromised".
+    Status: Compromised (Used only to decrypt data of a compromised key. Cannot be used to encrypt new data.)
+    - **key_id**: The ID of the CryptoKey to revoke.
     """
-    return crud.update_key_status(db, key_id, KeyStatus.EXPIRED)
+    return crud.update_key_status(db, key_id, KeyStatus.COMPROMISED)
 
 
-@app.post("/keys/{key_id}/delete", summary="Delete a CryptoKey")
-def delete_key(key_id: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
+@app.post("/keys/{key_id}/destroy", summary="Destroy a CryptoKey")
+def destroy_key(key_id: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
     """
-    Soft delete a CryptoKey by marking its status as "Deleted".
+    Transition the status of a CryptoKey to  "Destroyed".
+    Status: Destroyed (Historical reference to a key that no longer exists. Cannot be used to encrypt or decrypt data.)
 
-    - **key_id**: The ID of the CryptoKey to delete.
+    - **key_id**: The ID of the CryptoKey to destroy.
     """
-    return crud.update_key_status(db, key_id, KeyStatus.DELETED)
+    return crud.update_key_status(db, key_id, KeyStatus.DESTROYED)
 
-
+# Key History Operations
 @app.get("/keys/{key_id}/history", response_model=list[schemas.KeyHistorySchema], summary="Retrieve CryptoKey history")
 def get_key_history(key_id: str, db: Session = Depends(get_db)) -> list[schemas.CryptoKeySchema]:
     """
@@ -252,3 +261,6 @@ def get_key_history(key_id: str, db: Session = Depends(get_db)) -> list[schemas.
         raise HTTPException(
             status_code=404, detail="No history found for this key")
     return history
+
+
+
