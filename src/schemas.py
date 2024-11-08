@@ -5,7 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from models import KeyStatus
-from utils import format_cryptoperiod, parse_cryptoperiod
+from utils import format_cryptoperiod, parse_cryptoperiod, validate_cryptoperiod_days
 
 
 class KeyTypeBase(BaseModel):
@@ -26,13 +26,14 @@ class KeyTypeBase(BaseModel):
     cryptoperiod: str = Field(..., pattern=r"^\d+[dmy]$",
                               description="Cryptoperiod in format like '30d', '6m', '1y'")
 
-    @field_validator("cryptoperiod")
-    @classmethod
-    def validate_cryptoperiod(cls, v: str) -> str:
-        """Validate and parse cryptoperiod to ensure correct format."""
-        parse_cryptoperiod(v)  # This will raise a ValueError if invalid
-        return v
-
+    @model_validator(mode="before")
+    def parse_cryptoperiod_input(cls, values):
+        cryptoperiod = values.get("cryptoperiod")
+        if cryptoperiod:
+            days = parse_cryptoperiod(cryptoperiod)
+            validate_cryptoperiod_days(days)
+            values["cryptoperiod"] = days
+        return values
 
 class KeyTypeCreate(KeyTypeBase):
     pass
