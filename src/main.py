@@ -97,11 +97,12 @@ def update_key_type(
     return crud.update_key_type(db=db, key_type_id=keyTypeId, updates=updates)
 
 # Delete KeyType (soft delete)
-
-
 @app.delete("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema)
-def delete_key_type(keyTypeId: int, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
-    return crud.delete_key_type(db=db, key_type_id=keyTypeId)
+def delete_key_type(keyTypeId: int, force: bool = Query(False), db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
+    """
+    Delete a KeyType. If `force=True`, disable the KeyType and mark all associated keys as deleted.
+    """
+    return crud.delete_key_type(db=db, key_type_id=keyTypeId, force=force)
 
 # Key operations
 @app.post("/keys/", response_model=schemas.CryptoKeySchema)

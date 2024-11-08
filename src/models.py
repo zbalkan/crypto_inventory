@@ -11,6 +11,11 @@ from sqlalchemy.orm import Mapped, relationship
 from database import Base
 
 
+class KeyTypeStatus(Enum):
+    ACTIVE = "Active"
+    DISABLED = "Disabled"
+
+
 class KeyType(Base):
     __tablename__ = "key_types"
 
@@ -31,6 +36,11 @@ class KeyType(Base):
     # Relationship with CryptoKey
     crypto_keys: Mapped[list["CryptoKey"]] = relationship(
         "CryptoKey", back_populates="key_type")  # type: ignore
+    # Status field for soft deletion
+    status: Mapped[KeyTypeStatus] = Column(SQLAlchemyEnum(KeyTypeStatus),
+                                           default=KeyTypeStatus.ACTIVE)  # type: ignore
+
+    crypto_keys = relationship("CryptoKey", back_populates="key_type")
 
 
 class KeyStatus(Enum):
