@@ -1,8 +1,9 @@
 # crud.py
 from sqlite3 import IntegrityError
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Type
 
 from fastapi import HTTPException
+from sqlalchemy import asc, desc
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -12,16 +13,48 @@ from schemas import (CryptoKeyCreate, CryptoKeySchema, KeyTypeCreate,
 from utils import parse_cryptoperiod, validate_cryptoperiod_days
 
 
-def get_key_types(db: Session, skip: int = 0, limit: int = 10) -> Sequence[KeyTypeSchema]:
-    try:
-        db_key_types = db.query(KeyType).offset(skip).limit(limit).all()
-        return [KeyTypeSchema.model_validate(db_key_type) for db_key_type in db_key_types]
-    except SQLAlchemyError as e:
-        # Log the error and re-raise it as a user-friendly HTTPException
-        print(f"Error fetching key types: {e}")
-        raise HTTPException(
-            status_code=500, detail="Failed to fetch key types")
+def apply_filters_and_sorting(
+    query, model: Type, filters: Optional[dict] = None, order_by: Optional[str] = None
+):
+    # Apply filters
+    if filters:
+        for field, value in filters.items():
+            if hasattr(model, field):
+                query = query.filter(getattr(model, field) == value)
+            else:
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid filter field: {field}")
 
+    # Apply sorting
+    if order_by:
+        field_name = order_by.lstrip("-")
+        if not hasattr(model, field_name):
+            raise HTTPException(
+                status_code=400, detail=f"Invalid order_by field: {field_name}")
+
+        order_func = desc if order_by.startswith("-") else asc
+        query = query.order_by(order_func(getattr(model, field_name)))
+
+    return query
+
+
+def get_key_types(
+    db: Session,
+    skip: int = 0,
+    limit: int = 10,
+    order_by: Optional[str] = None,
+    filters: Optional[dict] = None
+) -> Sequence[KeyTypeSchema]:
+    query = db.query(KeyType)
+    query = apply_filters_and_sorting(query, KeyType, filters, order_by)
+    query = query.offset(skip).limit(limit)
+
+    try:
+        db_key_types = query.all()
+        return [KeyTypeSchema.model_validate(db_key_type) for db_key_type in db_key_types]
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=500, detail="Database error while retrieving key types.")
 
 def get_key_type(db: Session, key_type_id: int) -> Optional[KeyTypeSchema]:
     # Retrieve a single KeyType model from the database
@@ -33,7 +66,6 @@ def get_key_type(db: Session, key_type_id: int) -> Optional[KeyTypeSchema]:
 def create_key_type(db: Session, key_type: KeyTypeCreate) -> KeyTypeSchema:
     try:
         cryptoperiod_days = parse_cryptoperiod(key_type.cryptoperiod)
-        validate_cryptoperiod_days(cryptoperiod_days)  # Business rule validation
 
         db_key_type = KeyType(
             name=key_type.name,
@@ -59,18 +91,29 @@ def create_key_type(db: Session, key_type: KeyTypeCreate) -> KeyTypeSchema:
             status_code=500, detail="Failed to create key type")
 
 
-def get_crypto_keys(db: Session, skip: int = 0, limit: int = 10) -> Sequence[CryptoKeySchema]:
-    # Query the database to retrieve CryptoKey models
-    db_crypto_keys = db.query(CryptoKey).offset(skip).limit(limit).all()
-    # Convert each CryptoKey model to CryptoKeySchema
-    return [CryptoKeySchema.model_validate(db_crypto_key) for db_crypto_key in db_crypto_keys]
+def get_crypto_keys(
+    db: Session,
+    skip: int = 0,
+    limit: int = 10,
+    order_by: Optional[str] = None,
+    filters: Optional[dict] = None
+) -> Sequence[CryptoKeySchema]:
+    query = db.query(CryptoKey)
+    query = apply_filters_and_sorting(query, CryptoKey, filters, order_by)
+    query = query.offset(skip).limit(limit)
 
+    try:
+        db_crypto_keys = query.all()
+        return [CryptoKeySchema.model_validate(db_crypto_key) for db_crypto_key in db_crypto_keys]
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=500, detail="Database error while retrieving crypto keys.")
 
 def get_crypto_key(db: Session, key_id: int) -> Optional[CryptoKeySchema]:
     # Retrieve a single CryptoKey model from the database
     db_crypto_key = db.query(CryptoKey).filter(CryptoKey.id == key_id).first()
     # Convert to CryptoKeySchema if the model exists
-    return CryptoKeySchema.model_validate(db_crypto_key) if db_crypto_key else None
+    return CryptoKeySchema.model_validate(db_crypto_key, strict=True, from_attributes=True) if db_crypto_key else None
 
 
 def create_crypto_key(db: Session, crypto_key: CryptoKeyCreate) -> CryptoKeySchema:

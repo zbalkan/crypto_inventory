@@ -1,7 +1,7 @@
 # main.py
-from typing import Sequence
+from typing import Any, Optional, Sequence
 
-from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -48,17 +48,37 @@ def create_key_type(key_type: schemas.KeyTypeCreate, db: Session = Depends(get_d
 
 
 @app.get("/keyTypes/", response_model=Sequence[schemas.KeyTypeSchema])
-def read_key_types(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)) -> Sequence[schemas.KeyTypeSchema]:
-    key_types = crud.get_key_types(db, skip=skip, limit=limit)
-    # Format cryptoperiods for each returned KeyTypeSchema instance
-    for key_type in key_types:
-        key_type.cryptoperiod = format_cryptoperiod(key_type.cryptoperiod_days)
-    return key_types
+def read_key_types(
+    skip: int = Query(0, alias="offset", ge=0),
+    limit: int = Query(10, le=100),
+    order_by: Optional[str] = Query(
+        None, description="Field to order by, prefix with - for descending"),
+    name: Optional[str] = None,
+    algorithm: Optional[str] = None,
+    size_bits: Optional[int] = None,
+    db: Session = Depends(get_db),
+) -> Sequence[schemas.KeyTypeSchema]:
+    # Construct filters dictionary
+    filters = {}
+    if name is not None:
+        filters["name"] = name
+    if algorithm is not None:
+        filters["algorithm"] = algorithm
+    if size_bits is not None:
+        filters["size_bits"] = size_bits
+
+    return crud.get_key_types(
+        db=db,
+        skip=skip,
+        limit=limit,
+        order_by=order_by,
+        filters=filters
+    )
 
 
-@app.get("/keyTypes/{key_type_id}", response_model=schemas.KeyTypeSchema)
-def read_key_type(key_type_id: int, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
-    db_key_type = crud.get_key_type(db, key_type_id=key_type_id)
+@app.get("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema)
+def read_key_type(keyTypeId: int, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
+    db_key_type = crud.get_key_type(db, key_type_id=keyTypeId)
     if db_key_type is None:
         raise HTTPException(status_code=404, detail="KeyType not found")
     return db_key_type
@@ -72,14 +92,38 @@ def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, db: Session = Depends
     return crud.create_crypto_key(db=db, crypto_key=crypto_key)
 
 
-@app.get("/keys/", response_model=Sequence[schemas.CryptoKeySchema])
-def read_crypto_keys(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)) -> Sequence[schemas.CryptoKeySchema]:
-    return crud.get_crypto_keys(db, skip=skip, limit=limit)
+@app.get("/cryptoKeys/", response_model=Sequence[schemas.CryptoKeySchema])
+def read_crypto_keys(
+    skip: int = Query(0, alias="offset", ge=0),
+    limit: int = Query(10, le=100),
+    order_by: Optional[str] = Query(
+        None, description="Field to order by, prefix with - for descending"),
+    key_type_id: Optional[int] = None,
+    description: Optional[str] = None,
+    generating_entity: Optional[str] = None,
+    db: Session = Depends(get_db),
+) -> Sequence[schemas.CryptoKeySchema]:
+    # Construct filters dictionary
+    filters:dict[str, Any] = {}
+    if key_type_id is not None:
+        filters["key_type_id"] = key_type_id
+    if description is not None:
+        filters["description"] = description
+    if generating_entity is not None:
+        filters["generating_entity"] = generating_entity
+
+    return crud.get_crypto_keys(
+        db=db,
+        skip=skip,
+        limit=limit,
+        order_by=order_by,
+        filters=filters
+    )
 
 
-@app.get("/keys/{key_id}", response_model=schemas.CryptoKeySchema)
-def read_crypto_key(key_id: int, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
-    db_crypto_key = crud.get_crypto_key(db, key_id=key_id)
+@app.get("/cryptoKeys/{cryptoKeyId}", response_model=schemas.CryptoKeySchema)
+def read_crypto_key(cryptoKeyId: int, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
+    db_crypto_key = crud.get_crypto_key(db, key_id=cryptoKeyId)
     if db_crypto_key is None:
         raise HTTPException(status_code=404, detail="CryptoKey not found")
     return db_crypto_key
