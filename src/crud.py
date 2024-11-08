@@ -148,9 +148,9 @@ def get_crypto_keys(
         raise HTTPException(
             status_code=500, detail="Database error while retrieving crypto keys.")
 
-def get_crypto_key(db: Session, key_id: int) -> Optional[CryptoKeySchema]:
+def get_crypto_key(db: Session, key_id: str) -> Optional[CryptoKeySchema]:
     # Retrieve a single CryptoKey model from the database
-    db_crypto_key = db.query(CryptoKey).filter(CryptoKey.id == key_id).first()
+    db_crypto_key = db.query(CryptoKey).filter(CryptoKey.key_id == key_id).first()
     # Convert to CryptoKeySchema if the model exists
     return CryptoKeySchema.model_validate(db_crypto_key, strict=True, from_attributes=True) if db_crypto_key else None
 
@@ -205,11 +205,11 @@ def create_key_version(
             status_code=500, detail="Error creating new key version")
 
 
-def update_key_status(db: Session, key_id: int, new_status: KeyStatus) -> CryptoKeySchema:
+def update_key_status(db: Session, key_id: str, new_status: KeyStatus) -> CryptoKeySchema:
     # Find the latest record of the key
     original_key = (
         db.query(CryptoKey)
-        .filter(CryptoKey.id == key_id)
+        .filter(CryptoKey.key_id == key_id)
         .order_by(CryptoKey.record_creation_date.desc())
         .first()
     )
@@ -219,10 +219,10 @@ def update_key_status(db: Session, key_id: int, new_status: KeyStatus) -> Crypto
     # Create a new record with the updated status
     return create_key_version(db, original_key, new_status)
 
-def get_key_history(db: Session, key_id: int) -> list[CryptoKeySchema]:
+def get_key_history(db: Session, key_id: str) -> list[CryptoKeySchema]:
     history = (
         db.query(CryptoKey)
-        .filter(CryptoKey.id == key_id)
+        .filter(CryptoKey.key_id == key_id)
         .order_by(CryptoKey.record_creation_date)
         .all()
     )

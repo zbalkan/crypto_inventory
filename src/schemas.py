@@ -5,7 +5,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from models import KeyStatus
-from utils import parse_cryptoperiod
+from utils import format_cryptoperiod, parse_cryptoperiod
 
 
 class KeyTypeBase(BaseModel):
@@ -40,8 +40,13 @@ class KeyTypeCreate(KeyTypeBase):
 
 class KeyTypeSchema(KeyTypeBase):
     id: int
-    cryptoperiod_days: int = Field(...,
-                                   description="Cryptoperiod in days for internal storage")
+    cryptoperiod: str = Field(..., description="User-friendly cryptoperiod format")
+
+    @model_validator(mode="after")
+    def format_cryptoperiod_output(cls, values):
+        if "cryptoperiod" in values:
+            values["cryptoperiod"] = format_cryptoperiod(values["cryptoperiod"])
+        return values
 
     class Config:
         from_attributes = True
@@ -113,17 +118,17 @@ class CryptoKeyCreate(CryptoKeyBase):
 
 
 class CryptoKeySchema(CryptoKeyBase):
-    id: int
+    id: str = Field(alias="key_id")  # Expose `key_id` as `id` in the response
     record_creation_date: datetime = Field(
         ..., description="Date when this record was created for audit purposes")
 
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 class KeyHistorySchema(BaseModel):
-    id: int
-    key_type_id: int
+    id: str = Field(alias="key_id")  # Expose `key_id` as `id`
     status: KeyStatus
     record_creation_date: str
     description: str
@@ -131,3 +136,4 @@ class KeyHistorySchema(BaseModel):
 
     class Config:
         from_attributes = True
+        populate_by_name = True

@@ -68,13 +68,15 @@ def read_key_types(
     if size_bits is not None:
         filters["size_bits"] = size_bits
 
-    return crud.get_key_types(
+    result: Sequence[crud.KeyTypeSchema] = crud.get_key_types(
         db=db,
         skip=skip,
         limit=limit,
         order_by=order_by,
         filters=filters
     )
+
+    return result
 
 
 @app.get("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema)
@@ -130,7 +132,7 @@ def read_crypto_keys(
     if generating_entity is not None:
         filters["generating_entity"] = generating_entity
 
-    return crud.get_crypto_keys(
+    result: Sequence[crud.CryptoKeySchema] = crud.get_crypto_keys(
         db=db,
         skip=skip,
         limit=limit,
@@ -138,10 +140,13 @@ def read_crypto_keys(
         filters=filters
     )
 
+    return result
 
-@app.get("/keys/{cryptoKeyId}", response_model=schemas.CryptoKeySchema)
-def read_crypto_key(cryptoKeyId: int, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
-    db_crypto_key = crud.get_crypto_key(db, key_id=cryptoKeyId)
+
+@app.get("/keys/{key_id}", response_model=schemas.CryptoKeySchema)
+def read_crypto_key(key_id: str, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
+    db_crypto_key: Optional[schemas.CryptoKeySchema] = crud.get_crypto_key(
+        db, key_id=key_id)
     if db_crypto_key is None:
         raise HTTPException(status_code=404, detail="CryptoKey not found")
     return db_crypto_key
@@ -150,38 +155,42 @@ def read_crypto_key(cryptoKeyId: int, db: Session = Depends(get_db)) -> schemas.
 
 
 @app.post("/keys/{key_id}/activate")
-def activate_key(key_id: int, db: Session = Depends(get_db)):
-    key = crud.update_key_status(db, key_id, KeyStatus.CURRENT)
+def activate_key(key_id: str, db: Session = Depends(get_db)):
+    key: crud.CryptoKeySchema = crud.update_key_status(
+        db, key_id, KeyStatus.CURRENT)
     return key
 
 # Endpoint to transition key to "Retired"
 
 
 @app.post("/keys/{key_id}/retire")
-def retire_key(key_id: int, db: Session = Depends(get_db)):
-    key = crud.update_key_status(db, key_id, KeyStatus.RETIRED)
+def retire_key(key_id: str, db: Session = Depends(get_db)):
+    key: crud.CryptoKeySchema = crud.update_key_status(
+        db, key_id, KeyStatus.RETIRED)
     return key
 
 # Endpoint to transition key to "Expired"
 
 
 @app.post("/keys/{key_id}/expire")
-def expire_key(key_id: int, db: Session = Depends(get_db)):
-    key = crud.update_key_status(db, key_id, KeyStatus.EXPIRED)
+def expire_key(key_id: str, db: Session = Depends(get_db)):
+    key: crud.CryptoKeySchema = crud.update_key_status(
+        db, key_id, KeyStatus.EXPIRED)
     return key
 
 # Endpoint to transition key to "Deleted"
 
 
 @app.post("/keys/{key_id}/delete")
-def delete_key(key_id: int, db: Session = Depends(get_db)):
-    key = crud.update_key_status(db, key_id, KeyStatus.DELETED)
+def delete_key(key_id: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
+    key: crud.CryptoKeySchema = crud.update_key_status(db, key_id, KeyStatus.DELETED)
     return key
 
 
 @app.get("/keys/{key_id}/history", response_model=list[schemas.KeyHistorySchema])
-def get_key_history(key_id: int, db: Session = Depends(get_db)):
-    history = crud.get_key_history(db, key_id=key_id)
+def get_key_history(key_id: str, db: Session = Depends(get_db)) -> list[schemas.CryptoKeySchema]:
+    history: list[schemas.CryptoKeySchema] = crud.get_key_history(
+        db, key_id=key_id)
     if not history:
         raise HTTPException(
             status_code=404, detail="No history found for this key")

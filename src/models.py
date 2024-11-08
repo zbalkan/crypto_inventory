@@ -2,6 +2,7 @@
 from datetime import datetime, timezone
 from enum import Enum
 
+import ulid
 from sqlalchemy import Column, DateTime
 from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy import ForeignKey, Integer, String
@@ -44,6 +45,9 @@ class CryptoKey(Base):
 
     id: Mapped[int] = Column(Integer, primary_key=True,
                              index=True)  # type: ignore
+    key_id = Column(String, unique=True, default=lambda: str(
+        ulid.new()), index=True)  # ULID as unique identifier
+
     key_type_id: Mapped[int] = Column(
         Integer, ForeignKey("key_types.id"))  # type: ignore
     description: Mapped[str] = Column(String)  # type: ignore
