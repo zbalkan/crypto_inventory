@@ -116,6 +116,22 @@ class CryptoKeyBase(BaseModel):
 
 class CryptoKeyCreate(CryptoKeyBase):
     key_type_id: int
+    description: str
+    generating_entity: str
+    justification: str
+
+
+class CryptoKeyStatusUpdate(BaseModel):
+    status: KeyStatus
+    justification: Optional[str] = Field(
+        None, description="Reason for status change")
+
+    @field_validator("justification", mode="before")
+    def check_justification(cls, value, values):
+        if values.get("status") != KeyStatus.EXPIRED and not value:
+            raise ValueError(
+                "Justification is required for status changes except for expiration.")
+        return value
 
 class CryptoKeySchema(CryptoKeyBase):
     key_id: str

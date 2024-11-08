@@ -193,9 +193,10 @@ def get_crypto_key(db: Session, key_id: str) -> Optional[CryptoKeySchema]:
     return CryptoKeySchema.model_validate(db_crypto_key, strict=True, from_attributes=True) if db_crypto_key else None
 
 
-def create_crypto_key(db: Session, crypto_key: CryptoKeyCreate) -> CryptoKeySchema:
+def create_crypto_key(db: Session, crypto_key: CryptoKeyCreate, justification: str) -> CryptoKeySchema:
     # Create a new CryptoKey model using input from the CryptoKeyCreate schema
-    db_crypto_key = CryptoKey(**crypto_key.dict())
+    db_crypto_key = CryptoKey(**crypto_key.model_dump())
+    db_crypto_key.justification = justification
     db.add(db_crypto_key)
     db.commit()
     db.refresh(db_crypto_key)
@@ -243,7 +244,7 @@ def create_key_version(
             status_code=500, detail="Error creating new key version")
 
 
-def update_key_status(db: Session, key_id: str, new_status: KeyStatus) -> CryptoKeySchema:
+def update_key_status(db: Session, key_id: str, new_status: KeyStatus, justification: str) -> CryptoKeySchema:
     # Find the latest record of the key
     original_key = (
         db.query(CryptoKey)
@@ -254,18 +255,11 @@ def update_key_status(db: Session, key_id: str, new_status: KeyStatus) -> Crypto
     if not original_key:
         raise HTTPException(status_code=404, detail="Key not found")
 
+    if new_status != KeyStatus.EXPIRED and not justification:
+        raise ValueError("Justification is required for this status change.")
+
     # Create a new record with the updated status
     return create_key_version(db, original_key, new_status)
-
-def get_key_history(db: Session, key_id: str) -> list[CryptoKeySchema]:
-    history = (
-        db.query(CryptoKey)
-        .filter(CryptoKey.key_id == key_id)
-        .order_by(CryptoKey.record_creation_date)
-        .all()
-    )
-    return [CryptoKeySchema.model_validate(record) for record in history]
-
 
 def check_and_expire_keys(db: Session) -> None:
     """
@@ -282,6 +276,18 @@ def check_and_expire_keys(db: Session) -> None:
 
     for key in keys_to_expire:
         key.status = KeyStatus.EXPIRED
+        key.justification = "Automatically expired due to expiration date"
+
 
     # Commit the status updates to the database
     db.commit()
+
+
+def get_key_history(db: Session, key_id: str) -> list[CryptoKeySchema]:
+    history = (
+        db.query(CryptoKey)
+        .filter(CryptoKey.key_id == key_id)
+        .order_by(CryptoKey.record_creation_date)
+        .all()
+    )
+    return [CryptoKeySchema.model_validate(record) for record in history]

@@ -92,6 +92,7 @@ class CryptoKey(Base):
     audit_log_reference: Mapped[str] = Column(String)  # type: ignore
     backup_and_recovery_details: Mapped[str] = Column(String)  # type: ignore
     notes: Mapped[str] = Column(String)  # type: ignore
+    justification: Mapped[str] = Column(String, nullable=False)  # type: ignore
 
     # Relationship with KeyType
     key_type: Mapped["KeyType"] = relationship(

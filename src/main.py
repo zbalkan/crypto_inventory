@@ -204,7 +204,7 @@ def read_crypto_key(key_id: str, db: Session = Depends(get_db)) -> schemas.Crypt
 
 
 @app.post("/keys/", response_model=schemas.CryptoKeySchema, summary="Create a new CryptoKey")
-def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
+def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, justification: str, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
     """
     Create a new CryptoKey with specified details.
     Status: Active (Used to encrypt and decrypt data.)
@@ -215,37 +215,37 @@ def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, db: Session = Depends
         db, key_type_id=crypto_key.key_type_id)
     if not db_key_type:
         raise HTTPException(status_code=400, detail="Invalid key_type_id")
-    return crud.create_crypto_key(db=db, crypto_key=crypto_key)
+    return crud.create_crypto_key(db=db, crypto_key=crypto_key, justification=justification)
 
 @app.post("/keys/{key_id}/suspend", summary="suspend a CryptoKey")
-def suspend_key(key_id: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
+def suspend_key(key_id: str, justification: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
     """
     Transition the status of a CryptoKey to "Suspended".
     Status: Suspended (Temporarily disabled. Can be reactivated. Cannot be used to encrypt or decrypt data.)
 
     - **key_id**: The ID of the CryptoKey to suspend.
     """
-    return crud.update_key_status(db, key_id, KeyStatus.SUSPENDED)
+    return crud.update_key_status(db, key_id, KeyStatus.SUSPENDED, justification)
 
 @app.post("/keys/{key_id}/revoke", summary="Revoke a CryptoKey")
-def revoke_key(key_id: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
+def revoke_key(key_id: str, justification: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
     """
     Transition the status of a CryptoKey to "Compromised".
     Status: Compromised (Used only to decrypt data of a compromised key. Cannot be used to encrypt new data.)
     - **key_id**: The ID of the CryptoKey to revoke.
     """
-    return crud.update_key_status(db, key_id, KeyStatus.COMPROMISED)
+    return crud.update_key_status(db, key_id, KeyStatus.COMPROMISED, justification)
 
 
 @app.post("/keys/{key_id}/destroy", summary="Destroy a CryptoKey")
-def destroy_key(key_id: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
+def destroy_key(key_id: str, justification: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
     """
     Transition the status of a CryptoKey to  "Destroyed".
     Status: Destroyed (Historical reference to a key that no longer exists. Cannot be used to encrypt or decrypt data.)
 
     - **key_id**: The ID of the CryptoKey to destroy.
     """
-    return crud.update_key_status(db, key_id, KeyStatus.DESTROYED)
+    return crud.update_key_status(db, key_id, KeyStatus.DESTROYED, justification)
 
 # Key History Operations
 @app.get("/keys/{key_id}/history", response_model=list[schemas.KeyHistorySchema], summary="Retrieve CryptoKey history")
