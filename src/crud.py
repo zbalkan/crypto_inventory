@@ -152,7 +152,8 @@ def delete_key_type(db: Session, key_type_id: int, force: bool = False) -> KeyTy
     else:
         # If no associated keys, proceed with a safe deletion
         try:
-            db.delete(key_type)
+            # Soft delete KeyType by updating its status to DISABLED
+            key_type.status = KeyTypeStatus.DISABLED
             db.commit()
         except SQLAlchemyError as e:
             db.rollback()
