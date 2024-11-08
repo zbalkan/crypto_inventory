@@ -5,6 +5,11 @@ import re
 DAYS_IN_MONTH = 30
 DAYS_IN_YEAR = 365
 
+def validate_cryptoperiod_days(days: int) -> None:
+    MAX_DAYS = 365 * 100  # Arbitrary business rule, e.g., 100 years
+    if days > MAX_DAYS:
+        raise ValueError(f"Cryptoperiod days cannot exceed {MAX_DAYS} days")
+
 def parse_cryptoperiod(period_str: str) -> int:
     """
     Converts a cryptoperiod string like '30d', '6m', '1y' into days.

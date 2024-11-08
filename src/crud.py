@@ -1,19 +1,26 @@
 # crud.py
+from sqlite3 import IntegrityError
 from typing import Optional, Sequence
 
+from fastapi import HTTPException
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from models import CryptoKey, KeyType
 from schemas import (CryptoKeyCreate, CryptoKeySchema, KeyTypeCreate,
                      KeyTypeSchema)
-from utils import parse_cryptoperiod
+from utils import parse_cryptoperiod, validate_cryptoperiod_days
 
 
 def get_key_types(db: Session, skip: int = 0, limit: int = 10) -> Sequence[KeyTypeSchema]:
-    # Query the database to retrieve KeyType models
-    db_key_types = db.query(KeyType).offset(skip).limit(limit).all()
-    # Convert each KeyType model to KeyTypeSchema using model_validate
-    return [KeyTypeSchema.model_validate(db_key_type) for db_key_type in db_key_types]
+    try:
+        db_key_types = db.query(KeyType).offset(skip).limit(limit).all()
+        return [KeyTypeSchema.model_validate(db_key_type) for db_key_type in db_key_types]
+    except SQLAlchemyError as e:
+        # Log the error and re-raise it as a user-friendly HTTPException
+        print(f"Error fetching key types: {e}")
+        raise HTTPException(
+            status_code=500, detail="Failed to fetch key types")
 
 
 def get_key_type(db: Session, key_type_id: int) -> Optional[KeyTypeSchema]:
@@ -24,17 +31,29 @@ def get_key_type(db: Session, key_type_id: int) -> Optional[KeyTypeSchema]:
 
 
 def create_key_type(db: Session, key_type: KeyTypeCreate) -> KeyTypeSchema:
-    # Create a new KeyType model using input from the KeyTypeCreate schema
-    db_key_type = KeyType(
-        name=key_type.name,
-        description=key_type.description,
-        cryptoperiod_days=parse_cryptoperiod(key_type.cryptoperiod)
-    )
-    db.add(db_key_type)
-    db.commit()
-    db.refresh(db_key_type)
-    # Convert the database model to KeyTypeSchema for the response
-    return KeyTypeSchema.model_validate(db_key_type)
+    try:
+        cryptoperiod_days = parse_cryptoperiod(key_type.cryptoperiod)
+        validate_cryptoperiod_days(cryptoperiod_days)  # Business rule validation
+
+        db_key_type = KeyType(
+            name=key_type.name,
+            description=key_type.description,
+            cryptoperiod_days=parse_cryptoperiod(key_type.cryptoperiod)
+        )
+        db.add(db_key_type)
+        db.commit()
+        db.refresh(db_key_type)
+        return KeyTypeSchema.model_validate(db_key_type)
+    except IntegrityError as e:
+        db.rollback()  # Rollback transaction in case of error
+        print(f"Integrity error creating key type: {e}")
+        raise HTTPException(
+            status_code=400, detail="Key type already exists or invalid data")
+    except SQLAlchemyError as e:
+        db.rollback()
+        print(f"Error creating key type: {e}")
+        raise HTTPException(
+            status_code=500, detail="Failed to create key type")
 
 
 def get_crypto_keys(db: Session, skip: int = 0, limit: int = 10) -> Sequence[CryptoKeySchema]:

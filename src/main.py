@@ -1,17 +1,27 @@
 # main.py
-from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import Sequence
+
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
 import crud
 import models
 import schemas
-from database import engine, Base, get_db
+from database import Base, engine, get_db
 from utils import format_cryptoperiod
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+@app.exception_handler(IntegrityError)
+async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content={"detail": "Database integrity error. This may be due to duplicate or invalid data."}
+    )
 
 @app.post("/key_types/", response_model=schemas.KeyTypeSchema)
 def create_key_type(key_type: schemas.KeyTypeCreate, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
