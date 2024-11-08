@@ -89,65 +89,12 @@ class KeyTypeSchema(KeyTypeBase):
         populate_by_name = True
 
 class CryptoKeyBase(BaseModel):
-    description: str = Field(...,
-                      max_length=250,
-                             description="Description of the crypto key",
-                             examples=[
-                                 "AES encryption key for payment transactions",
-                                 "3DES key for cardholder verification data",
-                                 "Transport key - MAC key for secure message authentication"
-                             ])
-    generating_entity: str = Field(...,
-                      max_length=100,
-                                   description="Entity responsible for generating the key",
-                                   examples=["Payment Processor", "Issuer"])
-    generation_method: str = Field(...,
-                      max_length=50,
-                      description="Method of key generation")
-    storage_location: str = Field(...,
-                      max_length=100,
-                      description="Location where the key is stored")
-    encryption_under_lmk: str = Field(...,
-                      max_length=50,
-                      description="LMK encryption status")
-    form_factor: str = Field(...,
-                      max_length=100,
-                      description="Form factor (e.g., HSM, software)")
-    scope_of_uniqueness: str = Field(...,
-                      max_length=100,
-                      description="Scope of uniqueness")
-    usage_purpose: str = Field(...,
-                      max_length=100,
-                      description="Purpose for which the key is used")
-    operational_environment: str = Field(...,
-                      max_length=100,
-                      description="Operational environment details")
-    associated_parties: str = Field(...,
-                      max_length=250,
-                      description="Parties associated with this key")
-    intended_lifetime: str = Field(...,
-                      max_length=50,
-                      description="Intended lifetime (e.g., '5y')")
+    key_type_id: int
+
     status: KeyStatus
-    activation_date: Optional[datetime] = Field(None,
-                      description="The activation date of the key")
     expiration_date: Optional[datetime] = Field(None,
                       description="The rotation or expiration date of the key")
-    access_control_mechanisms: str = Field(...,
-                      max_length=250,
-                      description="Mechanisms to control access")
-    compliance_requirements: str = Field(...,
-                      max_length=250,
-                      description="Compliance requirements")
-    audit_log_reference: str = Field(...,
-                      max_length=100,
-                      description="Reference to audit logs")
-    backup_and_recovery_details: str = Field(...,
-                      max_length=250,
-                      description="Backup and recovery procedures")
-    notes: str = Field(...,
-                      max_length=500,
-                      description="Additional notes")
+
 
     @model_validator(mode="after")
     def check_dates(cls, values):
@@ -156,14 +103,66 @@ class CryptoKeyBase(BaseModel):
         if activation_date and rotation_date:
             if activation_date > rotation_date:
                 raise ValueError(
-                    "Activation date cannot be after rotation/expiration date.")
+                    "Activation date cannot be after expiration date.")
         return values
 
 class CryptoKeyCreate(CryptoKeyBase):
-    description: str
-    generating_entity: str
-    justification: str
-
+    description: str = Field(...,
+                             max_length=250,
+                             description="Description of the crypto key",
+                             examples=[
+                                 "AES encryption key for payment transactions",
+                                 "3DES key for cardholder verification data",
+                                 "Transport key - MAC key for secure message authentication"
+                             ])
+    activation_date: Optional[datetime] = Field(None,
+                                                description="The activation date of the key")
+    generating_entity: str = Field(...,
+                                   max_length=100,
+                                   description="Entity responsible for generating the key",
+                                   examples=["Payment Processor", "Issuer"])
+    generation_method: str = Field(...,
+                                   max_length=50,
+                                   description="Method of key generation")
+    storage_location: str = Field(...,
+                                  max_length=100,
+                                  description="Location where the key is stored")
+    encryption_under_lmk: str = Field(...,
+                                      max_length=50,
+                                      description="LMK encryption status")
+    form_factor: str = Field(...,
+                             max_length=100,
+                             description="Form factor (e.g., HSM, software)")
+    scope_of_uniqueness: str = Field(...,
+                                     max_length=100,
+                                     description="Scope of uniqueness")
+    usage_purpose: str = Field(...,
+                               max_length=100,
+                               description="Purpose for which the key is used")
+    operational_environment: str = Field(...,
+                                         max_length=100,
+                                         description="Operational environment details")
+    associated_parties: str = Field(...,
+                                    max_length=250,
+                                    description="Parties associated with this key")
+    intended_lifetime: str = Field(...,
+                                   max_length=50,
+                                   description="Intended lifetime (e.g., '5y')")
+    access_control_mechanisms: str = Field(...,
+                                           max_length=250,
+                                           description="Mechanisms to control access")
+    compliance_requirements: str = Field(...,
+                                         max_length=250,
+                                         description="Compliance requirements")
+    audit_log_reference: str = Field(...,
+                                     max_length=100,
+                                     description="Reference to audit logs")
+    backup_and_recovery_details: str = Field(...,
+                                             max_length=250,
+                                             description="Backup and recovery procedures")
+    notes: str = Field(...,
+                       max_length=500,
+                       description="Additional notes")
 
 class CryptoKeyStatusUpdate(BaseModel):
     status: KeyStatus

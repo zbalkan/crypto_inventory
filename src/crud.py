@@ -1,5 +1,5 @@
 # crud.py
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from sqlite3 import IntegrityError
 from typing import Any, Optional, Sequence, Type
 
@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from models import ALLOWED_TRANSITIONS, CryptoKey, KeyStatus, KeyType, KeyTypeStatus
 from schemas import CryptoKeyCreate, CryptoKeySchema, KeyTypeCreate, KeyTypeSchema
-from utils import parse_cryptoperiod
+from utils import format_cryptoperiod, parse_cryptoperiod
 
 
 def apply_filters_and_sorting(
@@ -170,15 +170,56 @@ def get_crypto_key(db: Session, key_id: str) -> Optional[CryptoKeySchema]:
     return CryptoKeySchema.model_validate(db_crypto_key, strict=True, from_attributes=True) if db_crypto_key else None
 
 
-def create_crypto_key(db: Session, crypto_key: CryptoKeyCreate, justification: str) -> CryptoKeySchema:
+def create_crypto_key(db: Session, crypto_key: CryptoKeyCreate) -> CryptoKeySchema:
     # Create a new CryptoKey model using input from the CryptoKeyCreate schema
     db_crypto_key = CryptoKey(**crypto_key.model_dump())
-    db_crypto_key.justification = justification
-    db.add(db_crypto_key)
-    db.commit()
-    db.refresh(db_crypto_key)
-    # Convert the database model to CryptoKeySchema for the response
-    return CryptoKeySchema.model_validate(db_crypto_key)
+
+    key_type = db.query(KeyType).filter(
+        KeyType.id == crypto_key.key_type_id).first()
+    if not key_type:
+        raise HTTPException(status_code=404, detail="KeyType not found")
+
+    # Calculate expiration date and intended lifetime based on KeyType's cryptoperiod
+    activation_date = crypto_key.activation_date or datetime.now(timezone.utc)
+    # Assuming cryptoperiod is stored as days in the KeyType
+    cryptoperiod_days = key_type.cryptoperiod_days
+    expiration_date = activation_date + timedelta(days=cryptoperiod_days)
+    # Convert days to a readable format for lifetime
+    intended_lifetime = format_cryptoperiod(cryptoperiod_days)
+
+    db_crypto_key = CryptoKey(
+        key_type_id=crypto_key.key_type_id,
+        description=crypto_key.description,
+        generating_entity=crypto_key.generating_entity,
+        generation_method=crypto_key.generation_method,
+        storage_location=crypto_key.storage_location,
+        encryption_under_lmk=crypto_key.encryption_under_lmk,
+        form_factor=crypto_key.form_factor,
+        scope_of_uniqueness=crypto_key.scope_of_uniqueness,
+        usage_purpose=crypto_key.usage_purpose,
+        operational_environment=crypto_key.operational_environment,
+        associated_parties=crypto_key.associated_parties,
+        intended_lifetime=intended_lifetime,
+        activation_date=activation_date,
+        expiration_date=expiration_date,
+        status=KeyStatus.ACTIVE,  # Default status on creation
+        access_control_mechanisms=crypto_key.access_control_mechanisms,
+        compliance_requirements=crypto_key.compliance_requirements,
+        audit_log_reference=crypto_key.audit_log_reference,
+        backup_and_recovery_details=crypto_key.backup_and_recovery_details,
+        notes=crypto_key.notes,
+        justification=crypto_key.usage_purpose,  # Default justification on creation
+    )
+
+    try:
+        # Add and commit the new CryptoKey to the database
+        db.add(db_crypto_key)
+        db.commit()
+        db.refresh(db_crypto_key)
+        return CryptoKeySchema.model_validate(db_crypto_key)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to create crypto key: {str(e)}")
 
 def create_key_version(
     db: Session,

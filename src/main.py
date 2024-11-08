@@ -194,9 +194,8 @@ def get_crypto_key(key_id: str, db: Session = Depends(get_db)) -> schemas.Crypto
         raise HTTPException(status_code=404, detail="CryptoKey not found")
     return db_crypto_key
 
-
 @app.post("/keys/", response_model=schemas.CryptoKeySchema, summary="Create a new CryptoKey")
-def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, justification: str, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
+def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
     """
     Create a new CryptoKey with specified details.
     Status: Active (Used to encrypt and decrypt data.)
@@ -207,7 +206,7 @@ def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, justification: str, d
         db, key_type_id=crypto_key.key_type_id)
     if not db_key_type:
         raise HTTPException(status_code=400, detail="Invalid key_type_id")
-    return crud.create_crypto_key(db=db, crypto_key=crypto_key, justification=justification)
+    return crud.create_crypto_key(db=db, crypto_key=crypto_key)
 
 @app.post("/keys/{key_id}/suspend", summary="Suspend a CryptoKey")
 def suspend_key(key_id: str, justification: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:
