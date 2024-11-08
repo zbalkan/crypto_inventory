@@ -31,10 +31,10 @@ class KeyTypeCreate(KeyTypeBase):
 
 class KeyTypeSchema(KeyTypeBase):
     id: int
-    cryptoperiod_days: int  # Store in days for internal use
+    cryptoperiod_days: int
 
     class Config:
-        from_attributes = True  # Enable compatibility with SQLAlchemy ORM models
+        from_attributes = True
 
 
 class CryptoKeyBase(BaseModel):
@@ -64,8 +64,8 @@ class CryptoKeyCreate(CryptoKeyBase):
     pass
 
 
-class CryptoKeySchema(CryptoKeyBase):  # Renamed to avoid conflict
+class CryptoKeySchema(CryptoKeyBase):
     id: int
 
     class Config:
-        from_attributes = True  # Use `from_attributes` instead of `orm_mode`
+        from_attributes = True
