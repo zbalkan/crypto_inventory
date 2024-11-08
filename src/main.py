@@ -15,13 +15,22 @@ from models import KeyStatus
 
 Base.metadata.create_all(bind=engine)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Schedule the periodic task to run in the background
-    @repeat_every(seconds=86400)  # Run every 24 hours
+    """
+    This function manages the startup and periodic tasks in FastAPI.
+    """
+
+    # Run the expiration check immediately on startup
+    db = next(get_db())
+    crud.check_and_expire_keys(db)
+
+    # Schedule the periodic task to run every hour
+    @repeat_every(seconds=3600)  # 3600 seconds = 1 hour
     async def scheduled_expiration_check() -> None:
         """
-        This task runs every 24 hours to check for keys that need to be expired.
+        This task runs every hour to check for keys that need to be expired.
         """
         db = next(get_db())
         crud.check_and_expire_keys(db)
