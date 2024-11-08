@@ -53,21 +53,6 @@ class KeyTypeSchema(KeyTypeBase):
         from_attributes = True
         populate_by_name = True
 
-class UpdateKeyType(BaseModel):
-    name: Optional[str] = Field(
-        None, max_length=100, pattern=r"^[A-Za-z0-9\s]+$")
-    description: Optional[str] = Field(None, max_length=250)
-    algorithm: Optional[str] = Field(None, max_length=50)
-    size_bits: Optional[int] = Field(None, ge=64, le=4096)
-    generated_by: Optional[str] = Field(None, max_length=100)
-    form_factor: Optional[str] = Field(None, max_length=100)
-    uniqueness_scope: Optional[str] = Field(None, max_length=100)
-    cryptoperiod: Optional[str] = Field(None, pattern=r"^\d+[dmy]$")
-
-    class Config:
-        from_attributes = True
-        populate_by_name = True
-
 class CryptoKeyBase(BaseModel):
     description: str = Field(..., max_length=250,
                              description="Description of the crypto key")

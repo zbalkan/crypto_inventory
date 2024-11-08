@@ -131,22 +131,6 @@ def read_key_type(keyTypeId: str, db: Session = Depends(get_db)) -> schemas.KeyT
     return db_key_type
 
 
-@app.patch("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema, summary="Update a KeyType by ID")
-def update_key_type(
-    keyTypeId: str,
-    key_type_updates: schemas.UpdateKeyType,
-    db: Session = Depends(get_db)
-) -> schemas.KeyTypeSchema:
-    """
-    Update specific fields of a KeyType by its ID.
-
-    - **keyTypeId**: The ID of the KeyType to update.
-    - **key_type_updates**: The fields to update with new values.
-    """
-    updates = key_type_updates.model_dump(exclude_unset=True)
-    return crud.update_key_type(db=db, key_type_id=keyTypeId, updates=updates)
-
-
 @app.delete("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema, summary="Delete or disable a KeyType")
 def delete_key_type(keyTypeId: str, force: bool = Query(False, description="Set to true to disable the KeyType and delete associated keys"), db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
     """

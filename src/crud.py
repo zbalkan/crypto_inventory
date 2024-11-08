@@ -96,29 +96,6 @@ def create_key_type(db: Session, key_type: KeyTypeCreate) -> KeyTypeSchema:
         raise HTTPException(
             status_code=500, detail="Failed to create key type")
 
-
-def update_key_type(db: Session, key_type_id: str, updates: dict[str, Any]) -> KeyTypeSchema:
-    key_type = db.query(KeyType).filter(KeyType.key_id == key_type_id).first()
-
-    if not key_type:
-        raise HTTPException(status_code=404, detail="KeyType not found")
-
-    for field, value in updates.items():
-        if field == "cryptoperiod" and value is not None:
-            # Convert cryptoperiod to days if provided
-            key_type.cryptoperiod_days = parse_cryptoperiod(value)
-        elif hasattr(key_type, field):
-            setattr(key_type, field, value)
-
-    try:
-        db.commit()
-        db.refresh(key_type)
-        return KeyTypeSchema.model_validate(key_type)
-    except SQLAlchemyError:
-        db.rollback()
-        raise HTTPException(status_code=500, detail="Error updating KeyType")
-
-
 def delete_key_type(db: Session, key_type_id: str, force: bool = False) -> KeyTypeSchema:
     # Retrieve the KeyType
     key_type = db.query(KeyType).filter(
