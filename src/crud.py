@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from models import ALLOWED_TRANSITIONS, CryptoKey, KeyStatus, KeyType, KeyTypeStatus
-from schemas import CryptoKeyCreate, CryptoKeySchema, KeyTypeCreate, KeyTypeSchema
+from schemas import CryptoKeyCreate, CryptoKeySchema, KeyTypeCreate, KeyTypeDeleteSchema, KeyTypeSchema
 from utils import format_cryptoperiod, parse_cryptoperiod
 
 
@@ -96,19 +96,17 @@ def create_key_type(db: Session, key_type: KeyTypeCreate) -> KeyTypeSchema:
         raise HTTPException(
             status_code=500, detail="Failed to create key type")
 
-def delete_key_type(db: Session, key_type_id: str, force: bool = False) -> KeyTypeSchema:
-    # Retrieve the KeyType
+
+def delete_key_type(db: Session, key_type_id: str, force: bool = False) -> KeyTypeDeleteSchema:
     key_type = db.query(KeyType).filter(
         KeyType.key_id == key_type_id, KeyType.status == KeyTypeStatus.ACTIVE).first()
     if not key_type:
         raise HTTPException(
             status_code=404, detail="KeyType not found or already disabled.")
 
-    # Check for associated CryptoKeys that are not already marked as deleted
     associated_keys_count = db.query(CryptoKey).filter(
-        CryptoKey.key_type_id == key_type_id, CryptoKey.status != KeyStatus.DESTROYED).count()
+        CryptoKey.key_type_id == key_type.id, CryptoKey.status != KeyStatus.DESTROYED).count()
 
-    # Standard deletion attempt (if force=False and there are associated keys, raise an error)
     if associated_keys_count > 0:
         if not force:
             raise HTTPException(
@@ -116,13 +114,9 @@ def delete_key_type(db: Session, key_type_id: str, force: bool = False) -> KeyTy
                 detail="Cannot delete KeyType with associated CryptoKeys. Use force=True to disable KeyType and soft delete associated keys."
             )
         else:
-            # If force=True, perform cascading soft delete
             try:
-                # Soft delete KeyType by updating its status to DISABLED
                 key_type.status = KeyTypeStatus.DISABLED
                 db.commit()
-
-                # Soft delete all associated CryptoKeys by updating their status to DELETED
                 db.query(CryptoKey).filter(CryptoKey.key_type_id == key_type.id).update(
                     {"status": KeyStatus.DESTROYED}
                 )
@@ -132,9 +126,7 @@ def delete_key_type(db: Session, key_type_id: str, force: bool = False) -> KeyTy
                 raise HTTPException(
                     status_code=500, detail=f"Error performing cascading soft delete: {str(e)}")
     else:
-        # If no associated keys, proceed with a safe deletion
         try:
-            # Soft delete KeyType by updating its status to DISABLED
             key_type.status = KeyTypeStatus.DISABLED
             db.commit()
         except SQLAlchemyError as e:
@@ -142,7 +134,7 @@ def delete_key_type(db: Session, key_type_id: str, force: bool = False) -> KeyTy
             raise HTTPException(
                 status_code=500, detail=f"Error deleting KeyType: {str(e)}")
 
-    return KeyTypeSchema.model_validate(key_type)
+    return KeyTypeDeleteSchema(key_id=key_type.key_id, status=key_type.status) # type: ignore
 
 
 def get_crypto_keys(

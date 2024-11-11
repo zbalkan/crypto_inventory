@@ -130,8 +130,12 @@ def create_key_type(key_type: schemas.KeyTypeCreate, db: Session = Depends(get_d
     """
     return crud.create_key_type(db=db, key_type=key_type)
 
-@app.delete("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeSchema, summary="Delete a KeyType")
-def delete_key_type(keyTypeId: str, force: bool = Query(False, description="Set to true to force the KeyType and delete associated keys"), db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
+
+@app.delete("/keyTypes/{keyTypeId}", response_model=schemas.KeyTypeDeleteSchema, summary="Delete a KeyType")
+def delete_key_type(keyTypeId: str,
+                    force: bool = Query(False,
+                                                        description="Set to true to force the KeyType and delete associated keys"),
+                                                        db: Session = Depends(get_db)) -> schemas.KeyTypeDeleteSchema:
     """
     Mark a KeyType as Deleted. If there are keys with the associated KeyType, thow an error.
     If `force=True`, mark the KeyType and mark all associated keys as deleted.
@@ -194,7 +198,7 @@ def get_crypto_key(key_id: str, db: Session = Depends(get_db)) -> schemas.Crypto
         raise HTTPException(status_code=404, detail="CryptoKey not found")
     return db_crypto_key
 
-@app.post("/keys/", response_model=schemas.CryptoKeySchema, summary="Create a new CryptoKey")
+@app.post("/keys/", response_model=schemas.CryptoKeyCreate, summary="Create a new CryptoKey")
 def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
     """
     Create a new CryptoKey with specified details.
