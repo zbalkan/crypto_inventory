@@ -69,7 +69,7 @@ async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONR
     )
 
 # KeyType Operations
-@app.get("/keyTypes/", response_model=Sequence[schemas.KeyTypeSchema], summary="List KeyTypes with optional filtering,pagination, and sorting")
+@app.get("/keyTypes/", response_model=Sequence[schemas.KeyTypeSchema], summary="List KeyTypes")
 def get_key_types(
     skip: int = Query(0, alias="offset", ge=0, description="The number of records to skip."),
     limit: int = Query(10, le=100, description="The number of records to return, maximum 100."),
@@ -142,7 +142,7 @@ def delete_key_type(keyTypeId: str, force: bool = Query(False, description="Set 
     return crud.delete_key_type(db=db, key_type_id=keyTypeId, force=force)
 
 # Key Operations
-@app.get("/keys/", response_model=Sequence[schemas.CryptoKeySchema], summary="List CryptoKeys with optional filtering, pagination, and sorting")
+@app.get("/keys/", response_model=Sequence[schemas.CryptoKeySchema], summary="List CryptoKeys")
 def get_crypto_keys(
     skip: int = Query(0, alias="offset", ge=0, description="The number of records to skip."),
     limit: int = Query(10, le=100, description="The number of records to return, maximum 100."),
