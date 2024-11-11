@@ -152,7 +152,7 @@ def get_crypto_keys(
     limit: int = Query(10, le=100, description="The number of records to return, maximum 100."),
     order_by: Optional[str] = Query(
         None, description="Field to order by, prefix with - for descending."),
-    key_type_id: Optional[int] = Query(None, description="Filter by key type ID"),
+    key_type_id: Optional[str] = Query(None, description="Filter by key type ID"),
     description: Optional[str] = Query(None, description="Filter by description"),
     generating_entity: Optional[str] = Query(None, description="Filter by generating entity"),
     db: Session = Depends(get_db),

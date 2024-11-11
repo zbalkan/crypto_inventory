@@ -56,9 +56,9 @@ def get_key_types(
         raise HTTPException(
             status_code=500, detail="Database error while retrieving key types.")
 
-def get_key_type_by_id(db: Session, key_type_id: int) -> Optional[KeyTypeSchema]:
+def get_key_type_by_id(db: Session, key_type_id: str) -> Optional[KeyTypeSchema]:
     # Retrieve a single KeyType model from the database
-    db_key_type = db.query(KeyType).filter(KeyType.id == key_type_id).first()
+    db_key_type = db.query(KeyType).filter(KeyType.key_id == key_type_id).first()
     # Convert to KeyTypeSchema if the model exists
     return KeyTypeSchema.model_validate(db_key_type) if db_key_type else None
 
@@ -167,7 +167,7 @@ def create_crypto_key(db: Session, crypto_key: CryptoKeyCreate) -> CryptoKeySche
     db_crypto_key = CryptoKey(**crypto_key.model_dump())
 
     key_type = db.query(KeyType).filter(
-        KeyType.id == crypto_key.key_type_id).first()
+        KeyType.key_id == crypto_key.key_type_id).first()
     if not key_type:
         raise HTTPException(status_code=404, detail="KeyType not found")
 
@@ -179,8 +179,10 @@ def create_crypto_key(db: Session, crypto_key: CryptoKeyCreate) -> CryptoKeySche
     # Convert days to a readable format for lifetime
     intended_lifetime = format_cryptoperiod(cryptoperiod_days)
 
+    key_type_id_int = key_type.id # lookup value
+
     db_crypto_key = CryptoKey(
-        key_type_id=crypto_key.key_type_id,
+        key_type_id=key_type_id_int,
         description=crypto_key.description,
         generating_entity=crypto_key.generating_entity,
         generation_method=crypto_key.generation_method,

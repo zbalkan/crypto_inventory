@@ -100,8 +100,8 @@ class KeyTypeDeleteSchema(BaseModel):
         from_attributes = True
 
 class CryptoKeyBase(BaseModel):
-    key_type_id: int = Field(...,
-                             description="ID of the associated KeyType")
+    key_type_id: str = Field(..., description="ULID of the associated KeyType")
+
 
     @model_validator(mode="after")
     def check_dates(cls, values):
@@ -115,7 +115,8 @@ class CryptoKeyBase(BaseModel):
 
 
 class CryptoKeyCreate(BaseModel):
-    key_type_id: int = Field(..., description="ID of the associated KeyType")
+    key_type_id: str = Field(..., description="ULID of the associated KeyType")
+
     description: str = Field(
         ...,
         max_length=250,
@@ -218,6 +219,9 @@ class CryptoKeyStatusUpdate(BaseModel):
         return value
 
 class CryptoKeySchema(CryptoKeyBase):
+    key_type_id: str = Field(..., description="ULID of the associated KeyType")
+
+
     key_id: str = Field(...,
                         description="ULID unique identifier for the CryptoKey")
     status: KeyStatus = Field(
