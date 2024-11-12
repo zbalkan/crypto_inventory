@@ -55,6 +55,23 @@ pip install -r requirements.txt
 
 4. **Setup Database:** Run the application once to initialize the SQLite database, or set up your preferred database in database.py.
 
+5. Configure development stuo with uvicorn and VS Code by adding this condiguration:
+
+```json
+        {
+            "name": "Python: uvicorn",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "main:app",
+                "--app-dir",
+                "src",
+                "--reload",
+            ]
+        }
+```
+
 ## Configuration
 
 The main configuration file is config.py where you can set:
