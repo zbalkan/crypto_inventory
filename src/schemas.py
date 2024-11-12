@@ -8,7 +8,7 @@ from models import KeyStatus, KeyTypeStatus
 from utils import format_cryptoperiod, parse_cryptoperiod, validate_cryptoperiod_days
 
 
-class KeyTypeBase(BaseModel):
+class KeyTypeBaseSchema(BaseModel):
     name: str = Field(...,
                       max_length=100,
                       pattern=r"^[A-Za-z0-9\s]+$",
@@ -56,20 +56,20 @@ class KeyTypeBase(BaseModel):
                               description="Cryptoperiod in format like '30d', '6m', '1y'",
                               examples=["1y", "6m", "30d"])
 
+class KeyTypeCreateSchema(KeyTypeBaseSchema):
     @model_validator(mode="before")
     def parse_cryptoperiod_input(cls, values):
-        cryptoperiod = values.get("cryptoperiod")
+        if isinstance(values, dict):
+            d = values
+        else:
+            d = values.__dict__
+        cryptoperiod = d.get("cryptoperiod")
         if cryptoperiod:
             days = parse_cryptoperiod(cryptoperiod)
             validate_cryptoperiod_days(days)
-            values["cryptoperiod"] = days
         return values
 
-class KeyTypeCreate(KeyTypeBase):
-    pass
-
-
-class KeyTypeSchema(KeyTypeBase):
+class KeyTypeSchema(KeyTypeBaseSchema):
     key_id: str = Field(...,
                         description="ULID key identifier",
                         examples=["01F8MECHZX3TBDSZ7XRADM79XV"]
@@ -78,10 +78,16 @@ class KeyTypeSchema(KeyTypeBase):
                               description="User-friendly cryptoperiod format",
                               examples=["1y", "6m", "30d"])
 
-    @model_validator(mode="after")
+    @model_validator(mode="before")
     def format_cryptoperiod_output(cls, values):
-        if "cryptoperiod" in values:
-            values["cryptoperiod"] = format_cryptoperiod(values["cryptoperiod"])
+        if isinstance(values, dict):
+            d = values
+        else:
+            d = values.__dict__
+
+        if "cryptoperiod_days" in d:
+            d['cryptoperiod'] = format_cryptoperiod(
+                d['cryptoperiod_days'])
         return values
 
     class Config:
@@ -99,7 +105,7 @@ class KeyTypeDeleteSchema(BaseModel):
     class Config:
         from_attributes = True
 
-class CryptoKeyBase(BaseModel):
+class CryptoKeyBaseSchema(BaseModel):
     key_type_id: str = Field(..., description="ULID of the associated KeyType")
 
 
@@ -114,7 +120,7 @@ class CryptoKeyBase(BaseModel):
         return values
 
 
-class CryptoKeyCreate(BaseModel):
+class CryptoKeyCreateSchema(BaseModel):
     key_type_id: str = Field(..., description="ULID of the associated KeyType")
 
     description: str = Field(
@@ -206,7 +212,7 @@ class CryptoKeyCreate(BaseModel):
     class Config:
         title = "CryptoKeyCreate"
 
-class CryptoKeyStatusUpdate(BaseModel):
+class CryptoKeyUpdateSchema(BaseModel):
     justification: Optional[str] = Field(None,
                                          description="Reason for status change",
                                          examples=["For new transaction encryption requirements"])
@@ -218,7 +224,7 @@ class CryptoKeyStatusUpdate(BaseModel):
                 "Justification is required for status changes except for expiration.")
         return value
 
-class CryptoKeySchema(CryptoKeyBase):
+class CryptoKeySchema(CryptoKeyBaseSchema):
     key_type_id: str = Field(..., description="ULID of the associated KeyType")
 
 

@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from models import ALLOWED_TRANSITIONS, CryptoKey, KeyStatus, KeyType, KeyTypeStatus
-from schemas import CryptoKeyCreate, CryptoKeySchema, KeyTypeCreate, KeyTypeDeleteSchema, KeyTypeSchema
+from schemas import CryptoKeyCreateSchema, CryptoKeySchema, KeyTypeCreateSchema, KeyTypeDeleteSchema, KeyTypeSchema
 from utils import format_cryptoperiod, parse_cryptoperiod
 
 
@@ -69,7 +69,7 @@ def get_key_type_by_ulid(db: Session, key_type_id: str) -> Optional[KeyTypeSchem
     # Convert to KeyTypeSchema if the model exists
     return KeyTypeSchema.model_validate(db_key_type) if db_key_type else None
 
-def create_key_type(db: Session, key_type: KeyTypeCreate) -> KeyTypeSchema:
+def create_key_type(db: Session, key_type: KeyTypeCreateSchema) -> KeyTypeSchema:
     try:
         cryptoperiod_days = parse_cryptoperiod(key_type.cryptoperiod)
 
@@ -162,7 +162,7 @@ def get_crypto_key(db: Session, key_id: str) -> Optional[CryptoKeySchema]:
     return CryptoKeySchema.model_validate(db_crypto_key, strict=True, from_attributes=True) if db_crypto_key else None
 
 
-def create_crypto_key(db: Session, crypto_key: CryptoKeyCreate) -> CryptoKeySchema:
+def create_crypto_key(db: Session, crypto_key: CryptoKeyCreateSchema) -> CryptoKeySchema:
     # Create a new CryptoKey model using input from the CryptoKeyCreate schema
     db_crypto_key = CryptoKey(**crypto_key.model_dump())
 
@@ -202,7 +202,7 @@ def create_crypto_key(db: Session, crypto_key: CryptoKeyCreate) -> CryptoKeySche
         audit_log_reference=crypto_key.audit_log_reference,
         backup_and_recovery_details=crypto_key.backup_and_recovery_details,
         notes=crypto_key.notes,
-        justification=crypto_key.usage_purpose,  # Default justification on creation
+        justification=crypto_key.usage_purpose
     )
 
     try:
@@ -242,7 +242,6 @@ def create_key_version(
         backup_and_recovery_details=original_key.backup_and_recovery_details,
         notes=original_key.notes,
         activation_date=original_key.activation_date,
-        # Track the creation date of this record
         timestamp=datetime.now(timezone.utc)
     )
     try:

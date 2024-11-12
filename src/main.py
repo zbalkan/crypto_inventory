@@ -123,7 +123,7 @@ def get_key_type(id: str, db: Session = Depends(get_db)) -> schemas.KeyTypeSchem
 
 
 @app.post("/key-types/", response_model=schemas.KeyTypeSchema, summary="Create a new KeyType")
-def create_key_type(key_type: schemas.KeyTypeCreate, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
+def create_key_type(key_type: schemas.KeyTypeCreateSchema, db: Session = Depends(get_db)) -> schemas.KeyTypeSchema:
     """
     Create a new KeyType with specified details.
 
@@ -198,8 +198,8 @@ def get_crypto_key(id: str, db: Session = Depends(get_db)) -> schemas.CryptoKeyS
         raise HTTPException(status_code=404, detail="CryptoKey not found")
     return db_crypto_key
 
-@app.post("/keys/", response_model=schemas.CryptoKeyCreate, summary="Create a new CryptoKey")
-def create_crypto_key(crypto_key: schemas.CryptoKeyCreate, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
+@app.post("/keys/", response_model=schemas.CryptoKeyCreateSchema, summary="Create a new CryptoKey")
+def create_crypto_key(crypto_key: schemas.CryptoKeyCreateSchema, db: Session = Depends(get_db)) -> schemas.CryptoKeySchema:
     """
     Create a new CryptoKey with specified details.
     Status: Active (Used to encrypt and decrypt data.)
