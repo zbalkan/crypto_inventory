@@ -1,7 +1,7 @@
 # crud.py
 from datetime import datetime, timedelta, timezone
 from sqlite3 import IntegrityError
-from typing import Any, Optional, Sequence, Type
+from typing import Optional, Sequence, Type
 
 from fastapi import HTTPException
 from sqlalchemy import asc, desc

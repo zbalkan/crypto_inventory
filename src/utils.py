@@ -1,14 +1,16 @@
 # utils.py
 import re
 
+from config import MAX_EXPIRY_DAYS
+
 # Constants for days per month and year for approximate conversions
 DAYS_IN_MONTH = 30
 DAYS_IN_YEAR = 365
 
 def validate_cryptoperiod_days(days: int) -> None:
-    MAX_DAYS = 365 * 100  # Arbitrary business rule, e.g., 100 years
-    if days > MAX_DAYS:
-        raise ValueError(f"Cryptoperiod days cannot exceed {MAX_DAYS} days")
+    if days > MAX_EXPIRY_DAYS:
+        period = format_cryptoperiod(days)
+        raise ValueError(f"Cryptoperiod days cannot exceed {period}")
 
 def parse_cryptoperiod(period_str: str) -> int:
     """

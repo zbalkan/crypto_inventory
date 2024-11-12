@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 import crud
 import schemas
+from config import EXPIRATION_CHECK_INTERVAL_MINUTES
 from database import Base, engine, get_db
 from models import KeyStatus
 
@@ -27,10 +28,10 @@ async def lifespan(app: FastAPI):
     crud.check_and_expire_keys(db)
 
     # Schedule the periodic task to run every hour
-    @repeat_every(seconds=3600)  # 3600 seconds = 1 hour
+    @repeat_every(seconds=EXPIRATION_CHECK_INTERVAL_MINUTES * 60)
     async def scheduled_expiration_check() -> None:
         """
-        This task runs every hour to check for keys that need to be expired.
+        This task runs periodically to check for keys that need to be expired.
         """
         db = next(get_db())
         crud.check_and_expire_keys(db)
