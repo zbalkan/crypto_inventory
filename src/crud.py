@@ -58,14 +58,15 @@ def get_key_types(
 
 def get_key_type_by_id(db: Session, key_type_id: str) -> Optional[KeyTypeSchema]:
     # Retrieve a single KeyType model from the database
-    db_key_type = db.query(KeyType).filter(KeyType.key_id == key_type_id).first()
+    db_key_type = db.query(KeyType).filter(KeyType.key_type_corr_id == key_type_id).first()
     # Convert to KeyTypeSchema if the model exists
     return KeyTypeSchema.model_validate(db_key_type) if db_key_type else None
 
 
 def get_key_type_by_ulid(db: Session, key_type_id: str) -> Optional[KeyTypeSchema]:
     # Retrieve a single KeyType model from the database
-    db_key_type = db.query(KeyType).filter(KeyType.key_id == key_type_id).first()
+    db_key_type = db.query(KeyType).filter(
+        KeyType.key_type_corr_id == key_type_id).first()
     # Convert to KeyTypeSchema if the model exists
     return KeyTypeSchema.model_validate(db_key_type) if db_key_type else None
 
@@ -99,13 +100,13 @@ def create_key_type(db: Session, key_type: KeyTypeCreateSchema) -> KeyTypeSchema
 
 def delete_key_type(db: Session, key_type_id: str, force: bool = False) -> KeyTypeDeleteSchema:
     key_type = db.query(KeyType).filter(
-        KeyType.key_id == key_type_id, KeyType.status == KeyTypeStatus.ACTIVE).first()
+        KeyType.key_type_corr_id == key_type_id, KeyType.status == KeyTypeStatus.ACTIVE).first()
     if not key_type:
         raise HTTPException(
             status_code=404, detail="KeyType not found or already disabled.")
 
     associated_keys_count = db.query(CryptoKey).filter(
-        CryptoKey.key_type_id == key_type.id, CryptoKey.status != KeyStatus.DESTROYED).count()
+        CryptoKey.key_type_corr_id == key_type.key_type_corr_id, CryptoKey.status != KeyStatus.DESTROYED).count()
 
     if associated_keys_count > 0:
         if not force:
@@ -117,7 +118,7 @@ def delete_key_type(db: Session, key_type_id: str, force: bool = False) -> KeyTy
             try:
                 key_type.status = KeyTypeStatus.DISABLED
                 db.commit()
-                db.query(CryptoKey).filter(CryptoKey.key_type_id == key_type.id).update(
+                db.query(CryptoKey).filter(CryptoKey.key_type_corr_id == key_type.key_type_corr_id).update(
                     {"status": KeyStatus.DESTROYED}
                 )
                 db.commit()
@@ -134,7 +135,7 @@ def delete_key_type(db: Session, key_type_id: str, force: bool = False) -> KeyTy
             raise HTTPException(
                 status_code=500, detail=f"Error deleting KeyType: {str(e)}")
 
-    return KeyTypeDeleteSchema(key_id=key_type.key_id, status=key_type.status) # type: ignore
+    return KeyTypeDeleteSchema(key_type_corr_id=key_type.key_type_corr_id, status=key_type.status) # type: ignore
 
 
 def get_crypto_keys(
@@ -157,32 +158,26 @@ def get_crypto_keys(
 
 def get_crypto_key(db: Session, key_id: str) -> Optional[CryptoKeySchema]:
     # Retrieve a single CryptoKey model from the database
-    db_crypto_key = db.query(CryptoKey).filter(CryptoKey.key_id == key_id).first()
+    db_crypto_key = db.query(CryptoKey).filter(CryptoKey.key_corr_id == key_id).first()
     # Convert to CryptoKeySchema if the model exists
     return CryptoKeySchema.model_validate(db_crypto_key, strict=True, from_attributes=True) if db_crypto_key else None
 
 
-def create_crypto_key(db: Session, crypto_key: CryptoKeyCreateSchema) -> CryptoKeySchema:
+def create_crypto_key(db: Session, crypto_key: CryptoKeyCreateSchema, key_type: KeyTypeSchema) -> CryptoKeySchema:
     # Create a new CryptoKey model using input from the CryptoKeyCreate schema
     db_crypto_key = CryptoKey(**crypto_key.model_dump())
 
-    key_type = db.query(KeyType).filter(
-        KeyType.key_id == crypto_key.key_type_id).first()
-    if not key_type:
-        raise HTTPException(status_code=404, detail="KeyType not found")
-
     # Calculate expiration date and intended lifetime based on KeyType's cryptoperiod
     activation_date = crypto_key.activation_date or datetime.now(timezone.utc)
+
     # Assuming cryptoperiod is stored as days in the KeyType
-    cryptoperiod_days = key_type.cryptoperiod_days
+    cryptoperiod_days = parse_cryptoperiod(key_type.cryptoperiod)
     expiration_date = activation_date + timedelta(days=cryptoperiod_days)
     # Convert days to a readable format for lifetime
     intended_lifetime = format_cryptoperiod(cryptoperiod_days)
 
-    key_type_id_int = key_type.id # lookup value
-
     db_crypto_key = CryptoKey(
-        key_type_id=key_type_id_int,
+        key_type_corr_id=key_type.key_type_corr_id,
         description=crypto_key.description,
         generating_entity=crypto_key.generating_entity,
         generation_method=crypto_key.generation_method,
@@ -222,7 +217,7 @@ def create_key_version(
 ) -> CryptoKeySchema:
     # Create a new version of the CryptoKey record
     new_key_version = CryptoKey(
-        key_type_id=original_key.key_type_id,
+        key_type_corr_id=original_key.key_type_corr_id,
         description=original_key.description,
         generating_entity=original_key.generating_entity,
         generation_method=original_key.generation_method,
@@ -242,7 +237,8 @@ def create_key_version(
         backup_and_recovery_details=original_key.backup_and_recovery_details,
         notes=original_key.notes,
         activation_date=original_key.activation_date,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(timezone.utc),
+        justification=original_key.justification
     )
     try:
         db.add(new_key_version)
@@ -265,7 +261,7 @@ def update_key_status(db: Session, key_id: str, new_status: KeyStatus, justifica
     # Find the latest record of the key
     original_key = (
         db.query(CryptoKey)
-        .filter(CryptoKey.key_id == key_id)
+        .filter(CryptoKey.key_corr_id == key_id)
         .order_by(CryptoKey.timestamp.desc())
         .first()
     )
@@ -313,7 +309,7 @@ def check_and_expire_keys(db: Session) -> None:
 def get_key_history(db: Session, key_id: str) -> list[CryptoKeySchema]:
     history = (
         db.query(CryptoKey)
-        .filter(CryptoKey.key_id == key_id)
+        .filter(CryptoKey.key_corr_id == key_id)
         .order_by(CryptoKey.timestamp)
         .all()
     )

@@ -207,10 +207,10 @@ def create_crypto_key(crypto_key: schemas.CryptoKeyCreateSchema, db: Session = D
     - **crypto_key**: Details of the CryptoKey to create.
     """
     db_key_type = crud.get_key_type_by_id(
-        db, key_type_id=crypto_key.key_type_id)
+        db, key_type_id=crypto_key.key_type_corr_id)
     if not db_key_type:
         raise HTTPException(status_code=400, detail="Invalid key_type_id")
-    return crud.create_crypto_key(db=db, crypto_key=crypto_key)
+    return crud.create_crypto_key(db=db, crypto_key=crypto_key, key_type=db_key_type)
 
 @app.post("/keys/{id}/suspend", summary="Suspend a CryptoKey")
 def suspend_key(id: str, justification: str, db: Session = Depends(get_db)) -> crud.CryptoKeySchema:

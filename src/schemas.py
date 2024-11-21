@@ -56,6 +56,10 @@ class KeyTypeBaseSchema(BaseModel):
                               description="Cryptoperiod in format like '30d', '6m', '1y'",
                               examples=["1y", "6m", "30d"])
 
+    class Config:
+        from_attributes = True
+        populate_by_name = True
+
 class KeyTypeCreateSchema(KeyTypeBaseSchema):
     @model_validator(mode="before")
     def parse_cryptoperiod_input(cls, values):
@@ -70,7 +74,8 @@ class KeyTypeCreateSchema(KeyTypeBaseSchema):
         return values
 
 class KeyTypeSchema(KeyTypeBaseSchema):
-    key_id: str = Field(...,
+
+    key_type_corr_id: str = Field(...,
                         description="ULID key identifier",
                         examples=["01F8MECHZX3TBDSZ7XRADM79XV"]
                         )
@@ -96,7 +101,7 @@ class KeyTypeSchema(KeyTypeBaseSchema):
 
 
 class KeyTypeDeleteSchema(BaseModel):
-    key_id: str = Field(...,
+    key_type_corr_id: str = Field(...,
                         description="ULID key identifier of the deleted KeyType")
     status: KeyTypeStatus = Field(
         ..., description="Status of the KeyType after deletion (e.g., Disabled)",
@@ -104,24 +109,112 @@ class KeyTypeDeleteSchema(BaseModel):
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 class CryptoKeyBaseSchema(BaseModel):
-    key_type_id: str = Field(..., description="ULID of the associated KeyType")
+    key_type_corr_id: str = Field(..., description="ULID of the associated KeyType")
 
 
-    @model_validator(mode="after")
-    def check_dates(cls, values):
-        activation_date = values.get("activation_date")
-        rotation_date = values.get("expiration_date")
+    description: str = Field(
+        ...,
+        max_length=250,
+        description="Description of the crypto key",
+        examples=[
+            "AES encryption key for payment transactions",
+            "3DES key for cardholder verification data",
+            "Transport key - MAC key for secure message authentication"
+        ]
+    )
+    activation_date: Optional[datetime] = Field(
+        None,
+        description="The activation date of the key. Defaults to current date if not provided."
+    )
+    generating_entity: str = Field(
+        ...,
+        max_length=100,
+        description="Entity responsible for generating the key",
+        examples=["Payment Processor", "Issuer"]
+    )
+    generation_method: str = Field(
+        ...,
+        max_length=50,
+        description="Method of key generation"
+    )
+    storage_location: str = Field(
+        ...,
+        max_length=100,
+        description="Location where the key is stored"
+    )
+    encryption_under_lmk: str = Field(
+        ...,
+        max_length=50,
+        description="LMK encryption status"
+    )
+    form_factor: str = Field(
+        ...,
+        max_length=100,
+        description="Form factor (e.g., HSM, software)"
+    )
+    scope_of_uniqueness: str = Field(
+        ...,
+        max_length=100,
+        description="Scope of uniqueness"
+    )
+    usage_purpose: str = Field(
+        ...,
+        max_length=100,
+        description="Purpose for which the key is used"
+    )
+    operational_environment: str = Field(
+        ...,
+        max_length=100,
+        description="Operational environment details"
+    )
+    associated_parties: str = Field(
+        ...,
+        max_length=250,
+        description="Parties associated with this key"
+    )
+    access_control_mechanisms: str = Field(
+        ...,
+        max_length=250,
+        description="Mechanisms to control access"
+    )
+    compliance_requirements: str = Field(
+        ...,
+        max_length=250,
+        description="Compliance requirements"
+    )
+    audit_log_reference: str = Field(
+        ...,
+        max_length=100,
+        description="Reference to audit logs"
+    )
+    backup_and_recovery_details: str = Field(
+        ...,
+        max_length=250,
+        description="Backup and recovery procedures"
+    )
+    notes: str = Field(
+        ...,
+        max_length=500,
+        description="Additional notes"
+    )
+
+    @model_validator(mode="after") # type: ignore
+    def check_dates(cls, values: "CryptoKeyBaseSchema"):
+        d = values.model_dump()
+
+        activation_date = d.get("activation_date")
+        rotation_date = d.get("expiration_date")
         if activation_date and rotation_date:
             if activation_date > rotation_date:
                 raise ValueError(
                     "Activation date cannot be after expiration date.")
         return values
 
-
 class CryptoKeyCreateSchema(BaseModel):
-    key_type_id: str = Field(..., description="ULID of the associated KeyType")
+    key_type_corr_id: str = Field(..., description="ULID of the associated KeyType")
 
     description: str = Field(
         ...,
@@ -211,6 +304,8 @@ class CryptoKeyCreateSchema(BaseModel):
 
     class Config:
         title = "CryptoKeyCreate"
+        from_attributes = True
+        populate_by_name = True
 
 class CryptoKeyUpdateSchema(BaseModel):
     justification: Optional[str] = Field(None,
@@ -225,10 +320,10 @@ class CryptoKeyUpdateSchema(BaseModel):
         return value
 
 class CryptoKeySchema(CryptoKeyBaseSchema):
-    key_type_id: str = Field(..., description="ULID of the associated KeyType")
+    key_type_corr_id: str = Field(..., description="ULID of the associated KeyType")
 
 
-    key_id: str = Field(...,
+    key_corr_id: str = Field(...,
                         description="ULID unique identifier for the CryptoKey")
     status: KeyStatus = Field(
         ..., description="Current status of the key, defaults to 'Active' on creation")
@@ -244,14 +339,21 @@ class CryptoKeySchema(CryptoKeyBaseSchema):
     class Config:
         from_attributes = True
         populate_by_name = True
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
 
 class KeyHistorySchema(BaseModel):
-    id: str = Field(alias="key_id")  # Expose `key_id` as `id`
+    id: str = Field(alias="key_corr_id")  # Expose `key_corr_id` as `id`
     status: KeyStatus
-    timestamp: str
+    timestamp: datetime
     description: str
     # Any other fields to show historical snapshots
 
     class Config:
         from_attributes = True
         populate_by_name = True
+
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }

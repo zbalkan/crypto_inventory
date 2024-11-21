@@ -22,7 +22,7 @@ class KeyType(Base):
 
     id: Mapped[int] = Column(Integer, primary_key=True,
                          index=True)  # type: ignore
-    key_id = Column(String, default=lambda: str(ulid.new()), unique=True, index=True)  # type: ignore
+    key_type_corr_id = Column(String, default=lambda: str(ulid.new()), unique=True, index=True)  # type: ignore
     name: Mapped[str] = Column(String, unique=True, index=True)  # type: ignore
     description: Mapped[str] = Column(String)  # type: ignore
     algorithm: Mapped[str] = Column(String)  # type: ignore
@@ -65,11 +65,11 @@ class CryptoKey(Base):
 
     id: Mapped[int] = Column(Integer, primary_key=True,
                              index=True)  # type: ignore
-    key_id = Column(String, unique=True, default=lambda: str(
-        ulid.new()), index=True)  # ULID as unique identifier
+    key_corr_id: Mapped[str] = Column(String, unique=True, default=lambda: str(
+        ulid.new()), index=True)  # type: ignore  # ULID as unique identifier
 
-    key_type_id: Mapped[int] = Column(
-        Integer, ForeignKey("key_types.id"))  # type: ignore
+    key_type_corr_id: Mapped[str] = Column(
+        String, ForeignKey("key_types.key_type_corr_id"))  # type: ignore
     description: Mapped[str] = Column(String)  # type: ignore
     generating_entity: Mapped[str] = Column(String)  # type: ignore
     generation_method: Mapped[str] = Column(String)  # type: ignore
@@ -93,6 +93,8 @@ class CryptoKey(Base):
     backup_and_recovery_details: Mapped[str] = Column(String)  # type: ignore
     notes: Mapped[str] = Column(String)  # type: ignore
     justification: Mapped[str] = Column(String, nullable=False)  # type: ignore
+    timestamp: Mapped[datetime] = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc))  # type: ignore
 
     # Relationship with KeyType
     key_type: Mapped["KeyType"] = relationship(
