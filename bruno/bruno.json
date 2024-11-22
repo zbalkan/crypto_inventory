@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Crypto Key Inventory Management API",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

@@ -1,0 +1,32 @@
+meta {
+  name: Create a new CryptoKey
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/keys/
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "key_type_corr_id": "01JD6YMK922QG42Q1W24WR75W8",
+    "description": "Initial ZMK",
+    "generating_entity": "Company",
+    "generation_method": "HSM",
+    "storage_location": "HSM",
+    "encryption_under_lmk": "-",
+    "form_factor": "-",
+    "scope_of_uniqueness": "Per logical configuration",
+    "usage_purpose": "All HSM ops",
+    "operational_environment": "Test",
+    "associated_parties": "Internal",
+    "access_control_mechanisms": "dual access, split knowledge",
+    "compliance_requirements": "PCI PIN, PCI 3DS, PCI DSS",
+    "audit_log_reference": "...",
+    "backup_and_recovery_details": "...",
+    "notes": "..."
+  }
+}

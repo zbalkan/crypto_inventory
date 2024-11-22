@@ -1,0 +1,19 @@
+meta {
+  name: Revoke a CryptoKey
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/keys/:id/revoke?justification="Key revoked due to suspicion of compromise"
+  body: none
+  auth: none
+}
+
+params:query {
+  justification: "Key revoked due to suspicion of compromise"
+}
+
+params:path {
+  id: 01JD7441Q0278GN666K3THZC42
+}

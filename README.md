@@ -88,6 +88,8 @@ Ensure the `config.py` aligns with your deployment.
 
 ## Testing
 
+### Unit tests
+
 Use `pytest` for testing. In VS Code, you can use the configuration below:
 
 ```json
@@ -106,6 +108,10 @@ Use `pytest` for testing. In VS Code, you can use the configuration below:
             }
         }
 ```
+
+### Interactive testing
+
+I used [Bruno](https://www.usebruno.com/) instead of Poastman for the sake of Git usage and simplicity. It allowed me to use Git with the collection as well. Just select the `bruno` folder and start testing.
 
 ## License
 

@@ -1,0 +1,19 @@
+meta {
+  name: Destroy a CryptoKey
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/keys/:id/destroy?justification="Destroyed after expiration - normally automatic"
+  body: none
+  auth: none
+}
+
+params:query {
+  justification: "Destroyed after expiration - normally automatic"
+}
+
+params:path {
+  id: 01JD772FVT78AXG8TDSHSGVX7M
+}

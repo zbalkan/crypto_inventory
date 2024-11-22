@@ -1,0 +1,19 @@
+meta {
+  name: Suspend a CryptoKey
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/keys/:id/suspend?justification="Key Custodian on leave"
+  body: none
+  auth: none
+}
+
+params:query {
+  justification: "Key Custodian on leave"
+}
+
+params:path {
+  id: 01JD77C7YHW6FW01CKVQ7TFGY4
+}
