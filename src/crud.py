@@ -8,9 +8,9 @@ from sqlalchemy import asc, desc
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from models import ALLOWED_TRANSITIONS, CryptoKey, KeyStatus, KeyType, KeyTypeStatus
-from schemas import CryptoKeyCreateSchema, CryptoKeySchema, KeyTypeCreateSchema, KeyTypeDeleteSchema, KeyTypeSchema
-from utils import format_cryptoperiod, parse_cryptoperiod
+from .models import ALLOWED_TRANSITIONS, CryptoKey, KeyStatus, KeyType, KeyTypeStatus
+from .schemas import CryptoKeyCreateSchema, CryptoKeySchema, KeyTypeCreateSchema, KeyTypeDeleteSchema, KeyTypeSchema
+from .utils import format_cryptoperiod, parse_cryptoperiod
 
 
 def apply_filters_and_sorting(
@@ -156,7 +156,7 @@ def get_crypto_keys(
         raise HTTPException(
             status_code=500, detail="Database error while retrieving crypto keys.")
 
-def get_crypto_key(db: Session, key_id: str) -> Optional[CryptoKeySchema]:
+def get_crypto_key_by_id(db: Session, key_id: str) -> Optional[CryptoKeySchema]:
     # Retrieve a single CryptoKey model from the database
     db_crypto_key = db.query(CryptoKey).filter(CryptoKey.key_corr_id == key_id).first()
     # Convert to CryptoKeySchema if the model exists
