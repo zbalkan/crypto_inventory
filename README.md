@@ -86,6 +86,27 @@ Ensure the `config.py` aligns with your deployment.
 - Run the application using `uvicorn  --app-dir ./src main:app --reload` command.
 - Visit either [Swagger UI](http://127.0.0.1:8000/docs) or [ReDoc](http://127.0.0.1:8000/redoc) for the endpoint documentation.
 
+## Testing
+
+Use `pytest` for testing. In VS Code, you can use the configuration below:
+
+```json
+ {
+            "name": "Python: pytest",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "--disable-warnings",
+                "-v",
+                "./src/tests"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        }
+```
+
 ## License
 
 This project is licensed under the Apache 2.0 License. See the LICENSE file for details.
