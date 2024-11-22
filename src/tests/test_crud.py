@@ -25,4 +25,4 @@ def test_get_crypto_key_by_id(test_db) -> None:
     # Then: The correct CryptoKey should be returned
     assert result is not None
     assert result.description == "Test CryptoKey"
-    assert result.status == KeyStatus.ACTIVE
+    assert result.status == KeyStatus.ACTIVE.value # type: ignore

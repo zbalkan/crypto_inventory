@@ -2,13 +2,18 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SerializationInfo, field_serializer, field_validator, model_validator
 
 from .models import KeyStatus, KeyTypeStatus
 from .utils import format_cryptoperiod, parse_cryptoperiod, validate_cryptoperiod_days
 
 
 class KeyTypeBaseSchema(BaseModel):
+
+    model_config = ConfigDict(use_enum_values=True,
+                              from_attributes=True,
+                              populate_by_name=True)
+
     name: str = Field(...,
                       max_length=100,
                       pattern=r"^[A-Za-z0-9\s]+$",
@@ -56,11 +61,8 @@ class KeyTypeBaseSchema(BaseModel):
                               description="Cryptoperiod in format like '30d', '6m', '1y'",
                               examples=["1y", "6m", "30d"])
 
-    class Config:
-        from_attributes = True
-        populate_by_name = True
-
 class KeyTypeCreateSchema(KeyTypeBaseSchema):
+
     @model_validator(mode="before")
     def parse_cryptoperiod_input(cls, values):
         if isinstance(values, dict):
@@ -74,6 +76,10 @@ class KeyTypeCreateSchema(KeyTypeBaseSchema):
         return values
 
 class KeyTypeSchema(KeyTypeBaseSchema):
+
+    model_config = ConfigDict(use_enum_values=True,
+                              from_attributes=True,
+                              populate_by_name=True)
 
     key_type_corr_id: str = Field(...,
                         description="ULID key identifier",
@@ -95,23 +101,26 @@ class KeyTypeSchema(KeyTypeBaseSchema):
                 d['cryptoperiod_days'])
         return values
 
-    class Config:
-        from_attributes = True
-        populate_by_name = True
-
 
 class KeyTypeDeleteSchema(BaseModel):
+
+    model_config = ConfigDict(use_enum_values=True,
+                              from_attributes=True,
+                              populate_by_name=True)
+
     key_type_corr_id: str = Field(...,
                         description="ULID key identifier of the deleted KeyType")
     status: KeyTypeStatus = Field(
         ..., description="Status of the KeyType after deletion (e.g., Disabled)",
         examples=["Disabled"])
 
-    class Config:
-        from_attributes = True
-        populate_by_name = True
-
 class CryptoKeyBaseSchema(BaseModel):
+
+    model_config = ConfigDict(use_enum_values=True,
+                              from_attributes=True,
+                              populate_by_name=True)
+
+
     key_type_corr_id: str = Field(..., description="ULID of the associated KeyType")
 
 
@@ -200,6 +209,10 @@ class CryptoKeyBaseSchema(BaseModel):
         max_length=500,
         description="Additional notes"
     )
+
+    @field_serializer("activation_date", when_used="json")
+    def serialize_activation_date(self, activation_date: datetime, info: SerializationInfo) -> str:
+        return activation_date.isoformat()
 
     @model_validator(mode="after") # type: ignore
     def check_dates(cls, values: "CryptoKeyBaseSchema"):
@@ -214,6 +227,11 @@ class CryptoKeyBaseSchema(BaseModel):
         return values
 
 class CryptoKeyCreateSchema(BaseModel):
+
+    model_config = ConfigDict(use_enum_values=True,
+                              from_attributes=True,
+                              populate_by_name=True)
+
     key_type_corr_id: str = Field(..., description="ULID of the associated KeyType")
 
     description: str = Field(
@@ -302,12 +320,16 @@ class CryptoKeyCreateSchema(BaseModel):
         description="Additional notes"
     )
 
-    class Config:
-        title = "CryptoKeyCreate"
-        from_attributes = True
-        populate_by_name = True
+    @field_serializer("activation_date", when_used="json")
+    def serialize_activation_date(self, activation_date: datetime, info: SerializationInfo) -> str:
+        return activation_date.isoformat()
 
 class CryptoKeyUpdateSchema(BaseModel):
+
+    model_config = ConfigDict(use_enum_values=True,
+                              from_attributes=True,
+                              populate_by_name=True)
+
     justification: Optional[str] = Field(None,
                                          description="Reason for status change",
                                          examples=["For new transaction encryption requirements"])
@@ -320,6 +342,7 @@ class CryptoKeyUpdateSchema(BaseModel):
         return value
 
 class CryptoKeySchema(CryptoKeyBaseSchema):
+
     key_type_corr_id: str = Field(..., description="ULID of the associated KeyType")
 
 
@@ -336,24 +359,28 @@ class CryptoKeySchema(CryptoKeyBaseSchema):
 
     # Inherits from CryptoKeyBase and includes additional fields for responses
 
-    class Config:
-        from_attributes = True
-        populate_by_name = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+    @field_serializer("timestamp", when_used="json")
+    def serialize_timestamp(self, timestamp: datetime, info: SerializationInfo) -> str:
+        return timestamp.isoformat()
+
+    @field_serializer("expiration_date", when_used="json")
+    def serialize_expiration_date(self, expiration_date: datetime, info: SerializationInfo) -> str:
+        return expiration_date.isoformat()
+
 
 class KeyHistorySchema(BaseModel):
+
+    model_config = ConfigDict(use_enum_values=True,
+                              from_attributes=True,
+                              populate_by_name=True)
+
     id: str = Field(alias="key_corr_id")  # Expose `key_corr_id` as `id`
     status: KeyStatus
     timestamp: datetime
     description: str
     # Any other fields to show historical snapshots
 
-    class Config:
-        from_attributes = True
-        populate_by_name = True
+    @field_serializer("timestamp", when_used="json")
+    def serialize_timestamp(self, timestamp: datetime, info: SerializationInfo) -> str:
+        return timestamp.isoformat()
 
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
