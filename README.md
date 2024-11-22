@@ -2,7 +2,7 @@
 
 The **Crypto Key Inventory Management API** is a RESTful API designed for securely managing cryptographic keys and key types, with functionality adhering to industry standards such as PCI DSS. This API provides endpoints for creating, reading, updating, and deleting cryptographic keys and key types, along with features like key rotation, key status management, and lifecycle tracking.
 
-This is a Proof of Concept, therefore the scurity configuration is ignored.
+This is a Proof of Concept, therefore the security configuration is ignored.
 
 ## Table of Contents
 
@@ -44,7 +44,7 @@ This is a Proof of Concept, therefore the scurity configuration is ignored.
 
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\\Scripts\\activate
+source venv/bin/activate  # On Windows: .\venv\Scripts\activate.ps1
 ```
 
 3. **Install Dependencies:**
@@ -55,7 +55,7 @@ pip install -r requirements.txt
 
 4. **Setup Database:** Run the application once to initialize the SQLite database, or set up your preferred database in database.py.
 
-5. Configure development stuo with uvicorn and VS Code by adding this condiguration:
+5. Configure development setup with uvicorn and VS Code by adding this configuration:
 
 ```json
         {
@@ -111,7 +111,7 @@ Use `pytest` for testing. In VS Code, you can use the configuration below:
 
 ### Interactive testing
 
-I used [Bruno](https://www.usebruno.com/) instead of Poastman for the sake of Git usage and simplicity. It allowed me to use Git with the collection as well. Just select the `bruno` folder and start testing.
+I used [Bruno](https://www.usebruno.com/) instead of Postman for the sake of Git usage and simplicity. It allowed me to use Git with the collection as well. Just select the `bruno` folder and start testing.
 
 ## License
 
