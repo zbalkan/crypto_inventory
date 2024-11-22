@@ -1,7 +1,7 @@
 # utils.py
 import re
 
-from config import MAX_EXPIRY_DAYS
+from .config import MAX_EXPIRY_DAYS
 
 # Constants for days per month and year for approximate conversions
 DAYS_IN_MONTH = 30

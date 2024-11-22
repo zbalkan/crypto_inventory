@@ -4,8 +4,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from models import KeyStatus, KeyTypeStatus
-from utils import format_cryptoperiod, parse_cryptoperiod, validate_cryptoperiod_days
+from .models import KeyStatus, KeyTypeStatus
+from .utils import format_cryptoperiod, parse_cryptoperiod, validate_cryptoperiod_days
 
 
 class KeyTypeBaseSchema(BaseModel):

@@ -8,14 +8,11 @@ from fastapi_utils.tasks import repeat_every
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-import crud
-import schemas
-from config import EXPIRATION_CHECK_INTERVAL_MINUTES
-from database import Base, engine, get_db
-from models import KeyStatus
-
-Base.metadata.create_all(bind=engine)
-
+from . import crud
+from .import schemas
+from .config import EXPIRATION_CHECK_INTERVAL_MINUTES
+from .database import get_db
+from .models import KeyStatus
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -193,7 +190,7 @@ def get_crypto_key(id: str, db: Session = Depends(get_db)) -> schemas.CryptoKeyS
 
     - **id**: The ID of the CryptoKey to retrieve.
     """
-    db_crypto_key: Optional[schemas.CryptoKeySchema] = crud.get_crypto_key(db, id)
+    db_crypto_key: Optional[schemas.CryptoKeySchema] = crud.get_crypto_key_by_id(db, id)
     if db_crypto_key is None:
         raise HTTPException(status_code=404, detail="CryptoKey not found")
     return db_crypto_key
