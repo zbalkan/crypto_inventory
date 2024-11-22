@@ -5,8 +5,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from ..database import Base
-from ..models import CryptoKey, KeyStatus, KeyType
+from internal.database import Base
+from internal.models import CryptoKey, KeyStatus, KeyType
 
 
 @pytest.fixture(scope="session")

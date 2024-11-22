@@ -1,5 +1,5 @@
-from ..crud import get_crypto_key_by_id, get_key_type_by_id
-from ..models import KeyStatus
+from internal.crud import get_crypto_key_by_id, get_key_type_by_id
+from internal.models import KeyStatus
 
 
 def test_get_key_type_by_id(test_db) -> None:

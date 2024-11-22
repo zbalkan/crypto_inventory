@@ -8,11 +8,11 @@ from fastapi_utils.tasks import repeat_every
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from . import crud
-from .import schemas
-from .config import EXPIRATION_CHECK_INTERVAL_MINUTES
-from .database import get_db
-from .models import KeyStatus
+from internal import crud, schemas
+from internal.config import EXPIRATION_CHECK_INTERVAL_MINUTES
+from internal.database import get_db
+from internal.models import KeyStatus
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
