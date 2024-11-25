@@ -43,8 +43,8 @@ This is a Proof of Concept, therefore the security configuration is ignored.
 2. **Create a Virtual Environment:**
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: .\venv\Scripts\activate.ps1
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .\.venv\Scripts\activate.ps1
 ```
 
 3. **Install Dependencies:**
@@ -59,18 +59,15 @@ pip install -r requirements.txt
 
 ```json
         {
-            "name": "Python: uvicorn",
+            "name": "Python: main",
             "type": "debugpy",
             "request": "launch",
-            "module": "uvicorn",
-            "args": [
-                "main:app",
-                "--app-dir",
-                "src",
-                "--reload",
-            ]
+            "program": "./src/main.py",
+            "console": "integratedTerminal"
         }
 ```
+
+6. The service starts running at the [http://127.0.0.1:8000](http://127.0.0.1:8000) address.
 
 ## Configuration
 
@@ -83,8 +80,8 @@ Ensure the `config.py` aligns with your deployment.
 
 ## Endpoints
 
-- Run the application using `uvicorn  --app-dir ./src main:app --reload` command.
-- Visit either [Swagger UI](http://127.0.0.1:8000/docs) or [ReDoc](http://127.0.0.1:8000/redoc) for the endpoint documentation.
+- Run the application using `python .\src\main.py` command.
+- Visit either [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) for Swagger UI or [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc) for the ReDoc endpoint documentation.
 
 ## Testing
 

@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from ..main import app, get_db
+from ..app import app, get_db
 
 # Override the get_db dependency with the test database session
 
